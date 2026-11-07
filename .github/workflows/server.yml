@@ -1,0 +1,115 @@
+# CI for the Rust server binary (server/).
+# - every push / PR touching the server: rustfmt, clippy, tests
+# - pushes to main and tags: release binaries for x86_64 and aarch64 Linux (workflow artifacts)
+# - tags `server-v*`: additionally published as a GitHub release
+name: server
+
+on:
+  push:
+    branches: [main]
+    tags: ['server-v*']
+    paths:
+      - 'server/**'
+      - 'docs/calendar-vectors.json'
+      - '.github/workflows/server.yml'
+  pull_request:
+    paths:
+      - 'server/**'
+      - 'docs/calendar-vectors.json'
+      - '.github/workflows/server.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: server-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: -D warnings
+
+defaults:
+  run:
+    working-directory: server
+
+jobs:
+  check:
+    name: fmt · clippy · test
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: System dependencies (OpenSSL for web-push)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends pkg-config libssl-dev
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: server
+      - run: cargo fmt --check
+      - run: cargo clippy --locked --all-targets -- -D warnings
+      # tests read ../docs/calendar-vectors.json, the contract shared with client/src/sim/calendar.ts
+      - run: cargo test --locked
+
+  build:
+    name: release · ${{ matrix.arch }}
+    needs: check
+    if: github.event_name != 'pull_request'
+    strategy:
+      matrix:
+        include:
+          # 22.04 → glibc 2.35 / OpenSSL 3, so the binary runs on most current server distros
+          - arch: x86_64
+            runner: ubuntu-22.04
+          - arch: aarch64
+            runner: ubuntu-22.04-arm
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: System dependencies (OpenSSL for web-push)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends pkg-config libssl-dev
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: server
+          key: release-${{ matrix.arch }}
+      - run: cargo build --locked --release
+      - name: Package
+        id: pkg
+        run: |
+          name="siege-server-${{ matrix.arch }}-linux-gnu"
+          mkdir -p "dist/$name"
+          cp target/release/siege-server ../LICENSE ../deploy/siege.service ../deploy/Caddyfile ../deploy/backup.sh "dist/$name/"
+          tar -C dist -czf "dist/$name.tar.gz" "$name"
+          (cd dist && sha256sum "$name.tar.gz" > "$name.tar.gz.sha256")
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.pkg.outputs.name }}
+          path: |
+            server/dist/${{ steps.pkg.outputs.name }}.tar.gz
+            server/dist/${{ steps.pkg.outputs.name }}.tar.gz.sha256
+          if-no-files-found: error
+
+  release:
+    name: GitHub release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/server-v')
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - name: Publish
+        working-directory: artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
+            --title "Server $GITHUB_REF_NAME" --generate-notes \
+            ./*.tar.gz ./*.sha256

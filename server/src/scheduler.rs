@@ -49,7 +49,8 @@ pub(crate) fn collect_at(state: &AppState, now: i64) -> anyhow::Result<Vec<Job>>
         if windows.last().map(|w| now > w.dawn + DAWN_GRACE_MS).unwrap_or(true) {
             continue;
         }
-        let members: Vec<String> = db.prepare("SELECT user_id FROM members WHERE challenge_id = ?1")?.query_map(params![cid], |r| r.get(0))?.collect::<Result<_, _>>()?;
+        let members: Vec<String> =
+            db.prepare("SELECT user_id FROM members WHERE challenge_id = ?1")?.query_map(params![cid], |r| r.get(0))?.collect::<Result<_, _>>()?;
         let remind_time = NaiveTime::from_hms_opt(REMIND_AT.0, REMIND_AT.1, 0).unwrap();
         for w in &windows {
             let remind_at = calendar::zoned_to_utc(w.date, remind_time, cal.tz);
@@ -105,9 +106,7 @@ async fn send_to_user(state: &AppState, job: &Job) {
             Ok(s) => s,
             Err(_) => return,
         };
-        stmt.query_map(params![job.user_id], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))
-            .map(|rows| rows.filter_map(Result::ok).collect())
-            .unwrap_or_default()
+        stmt.query_map(params![job.user_id], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?))).map(|rows| rows.filter_map(Result::ok).collect()).unwrap_or_default()
     };
     let push = state.push.as_ref().unwrap();
     for (endpoint, p256dh, auth) in subs {

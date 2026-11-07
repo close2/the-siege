@@ -1,4 +1,6 @@
-# The Siege v2
+# The Siege
+
+[![server](https://github.com/close2/the-siege/actions/workflows/server.yml/badge.svg)](https://github.com/close2/the-siege/actions/workflows/server.yml)
 
 A cooperative 2D habit-challenge base-defense PWA. Every player guards a sector of the valley; daily check-ins earn gold and send your hero to the road, while orders placed during the day build and upgrade towers before the nightly assault at **Dawn**.
 
@@ -69,6 +71,16 @@ Environment variables:
 | `STATIC_DIR` | *(none)* | Path to built `client/dist` directory (enables SPA fallback) |
 | `VAPID_PRIVATE_KEY_PATH` | `vapid_private.pem` | EC P-256 PEM file (auto-generated on first start if missing) |
 | `VAPID_SUBJECT` | `mailto:admin@example.com` | Contact URI for Web Push VAPID claims |
+
+---
+
+## CI
+
+[`.github/workflows/server.yml`](.github/workflows/server.yml) runs on every push / PR that touches `server/` (or the shared `docs/calendar-vectors.json`):
+
+1. `cargo fmt --check` (style in `server/rustfmt.toml`), `cargo clippy -D warnings`, `cargo test`.
+2. On pushes to `main`: release builds for **x86_64** and **aarch64** Linux (built on Ubuntu 22.04 → needs glibc ≥ 2.35 and OpenSSL 3, e.g. `libssl3`), packaged with the deploy files and downloadable as workflow artifacts.
+3. On a tag `server-v*` (e.g. `git tag -s server-v0.1.0 && git push --tags`): the same archives are published as a GitHub release.
 
 ---
 

@@ -75,11 +75,9 @@ impl FromRequestParts<AppState> for AuthUser {
         let token = header.strip_prefix("Bearer ").ok_or_else(|| err(StatusCode::UNAUTHORIZED, "missing token"))?;
         let db = state.db.lock().unwrap();
         let row = db
-            .query_row(
-                "SELECT u.id, u.name FROM tokens t JOIN users u ON u.id = t.user_id WHERE t.token_hash = ?1",
-                params![hash_token(token)],
-                |r| Ok(AuthUser { id: r.get(0)?, name: r.get(1)? }),
-            )
+            .query_row("SELECT u.id, u.name FROM tokens t JOIN users u ON u.id = t.user_id WHERE t.token_hash = ?1", params![hash_token(token)], |r| {
+                Ok(AuthUser { id: r.get(0)?, name: r.get(1)? })
+            })
             .optional()?;
         row.ok_or_else(|| err(StatusCode::UNAUTHORIZED, "invalid token"))
     }
@@ -242,14 +240,14 @@ fn validate_config(c: &Value, now: i64) -> ApiResult<calendar::CalConfig> {
 
 fn challenge_json(db: &rusqlite::Connection, id: &str) -> ApiResult<Value> {
     let row = db
-        .query_row(
-            "SELECT config_json, seed, sim_version, invite_code, creator FROM challenges WHERE id = ?1",
-            params![id],
-            |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, i64>(2)?, r.get::<_, String>(3)?, r.get::<_, String>(4)?)),
-        )
+        .query_row("SELECT config_json, seed, sim_version, invite_code, creator FROM challenges WHERE id = ?1", params![id], |r| {
+            Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, i64>(2)?, r.get::<_, String>(3)?, r.get::<_, String>(4)?))
+        })
         .optional()?
         .ok_or_else(|| err(StatusCode::NOT_FOUND, "challenge not found"))?;
-    let mut stmt = db.prepare("SELECT m.user_id, u.name, m.hero_class, m.join_order FROM members m JOIN users u ON u.id = m.user_id WHERE m.challenge_id = ?1 ORDER BY m.join_order")?;
+    let mut stmt = db.prepare(
+        "SELECT m.user_id, u.name, m.hero_class, m.join_order FROM members m JOIN users u ON u.id = m.user_id WHERE m.challenge_id = ?1 ORDER BY m.join_order",
+    )?;
     let members: Vec<Value> = stmt
         .query_map(params![id], |r| {
             Ok(json!({ "userId": r.get::<_, String>(0)?, "name": r.get::<_, String>(1)?, "heroClass": r.get::<_, String>(2)?, "joinOrder": r.get::<_, i64>(3)? }))
@@ -381,7 +379,12 @@ struct EventBody {
     payload: Value,
 }
 
-async fn put_event(State(s): State<AppState>, u: AuthUser, Path((id, day, kind)): Path<(String, u32, String)>, Json(b): Json<EventBody>) -> ApiResult<Json<Value>> {
+async fn put_event(
+    State(s): State<AppState>,
+    u: AuthUser,
+    Path((id, day, kind)): Path<(String, u32, String)>,
+    Json(b): Json<EventBody>,
+) -> ApiResult<Json<Value>> {
     if !matches!(kind.as_str(), "checkin" | "orders" | "hash") {
         return Err(err(StatusCode::BAD_REQUEST, "invalid kind"));
     }

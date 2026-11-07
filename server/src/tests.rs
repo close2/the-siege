@@ -115,14 +115,7 @@ async fn challenges_join_and_limits() {
     let tok1 = u1["token"].as_str().unwrap();
 
     // Past start date rejected
-    let (st, _) = req(
-        &app,
-        "POST",
-        "/api/challenges",
-        Some(tok1),
-        Some(json!({ "config": valid_config("2020-01-01"), "heroClass": "knight" })),
-    )
-    .await;
+    let (st, _) = req(&app, "POST", "/api/challenges", Some(tok1), Some(json!({ "config": valid_config("2020-01-01"), "heroClass": "knight" }))).await;
     assert_eq!(st, StatusCode::BAD_REQUEST);
 
     // Theme without finished art rejected
@@ -133,14 +126,7 @@ async fn challenges_join_and_limits() {
 
     // Future start date so joining is open
     let tomorrow = (chrono::Utc::now().date_naive() + chrono::Duration::days(1)).format("%Y-%m-%d").to_string();
-    let (st, ch) = req(
-        &app,
-        "POST",
-        "/api/challenges",
-        Some(tok1),
-        Some(json!({ "config": valid_config(&tomorrow), "heroClass": "knight" })),
-    )
-    .await;
+    let (st, ch) = req(&app, "POST", "/api/challenges", Some(tok1), Some(json!({ "config": valid_config(&tomorrow), "heroClass": "knight" }))).await;
     assert_eq!(st, StatusCode::OK);
     let cid = ch["id"].as_str().unwrap();
     let invite = ch["inviteCode"].as_str().unwrap();
@@ -155,14 +141,7 @@ async fn challenges_join_and_limits() {
     for i in 2..=8 {
         let (_, u) = req(&app, "POST", "/api/users", None, Some(json!({ "name": format!("Hero{i}") }))).await;
         let tok = u["token"].as_str().unwrap();
-        let (st, joined) = req(
-            &app,
-            "POST",
-            "/api/challenges/join",
-            Some(tok),
-            Some(json!({ "inviteCode": invite, "heroClass": "ranger" })),
-        )
-        .await;
+        let (st, joined) = req(&app, "POST", "/api/challenges/join", Some(tok), Some(json!({ "inviteCode": invite, "heroClass": "ranger" }))).await;
         assert_eq!(st, StatusCode::OK);
         assert_eq!(joined["members"].as_array().unwrap().len(), i);
     }
@@ -170,14 +149,7 @@ async fn challenges_join_and_limits() {
     // 9th user rejected with 409 CONFLICT
     let (_, u9) = req(&app, "POST", "/api/users", None, Some(json!({ "name": "Extra" }))).await;
     let tok9 = u9["token"].as_str().unwrap();
-    let (st, _) = req(
-        &app,
-        "POST",
-        "/api/challenges/join",
-        Some(tok9),
-        Some(json!({ "inviteCode": invite, "heroClass": "priest" })),
-    )
-    .await;
+    let (st, _) = req(&app, "POST", "/api/challenges/join", Some(tok9), Some(json!({ "inviteCode": invite, "heroClass": "priest" }))).await;
     assert_eq!(st, StatusCode::CONFLICT);
 
     // Non-member cannot GET challenge or events
@@ -195,14 +167,7 @@ async fn events_windows_and_sequencing() {
 
     // Start today in UTC -> Day 1 is currently open
     let today = calendar::local_date(crate::api::now_ms(), chrono_tz::UTC).format("%Y-%m-%d").to_string();
-    let (st, ch) = req(
-        &app,
-        "POST",
-        "/api/challenges",
-        Some(tok1),
-        Some(json!({ "config": valid_config(&today), "heroClass": "knight" })),
-    )
-    .await;
+    let (st, ch) = req(&app, "POST", "/api/challenges", Some(tok1), Some(json!({ "config": valid_config(&today), "heroClass": "knight" }))).await;
     assert_eq!(st, StatusCode::OK);
     let cid = ch["id"].as_str().unwrap();
     let invite = ch["inviteCode"].as_str().unwrap();
@@ -210,25 +175,11 @@ async fn events_windows_and_sequencing() {
     // Joining after Day 1 opened is rejected
     let (_, u2) = req(&app, "POST", "/api/users", None, Some(json!({ "name": "Late" }))).await;
     let tok2 = u2["token"].as_str().unwrap();
-    let (st, _) = req(
-        &app,
-        "POST",
-        "/api/challenges/join",
-        Some(tok2),
-        Some(json!({ "inviteCode": invite, "heroClass": "ranger" })),
-    )
-    .await;
+    let (st, _) = req(&app, "POST", "/api/challenges/join", Some(tok2), Some(json!({ "inviteCode": invite, "heroClass": "ranger" }))).await;
     assert_eq!(st, StatusCode::CONFLICT);
 
     // Day 1 checkin + orders succeed; upsert advances seq and replaces old row
-    let (st, r1) = req(
-        &app,
-        "PUT",
-        &format!("/api/challenges/{cid}/days/1/checkin"),
-        Some(tok1),
-        Some(json!({ "payload": { "kept": [false] } })),
-    )
-    .await;
+    let (st, r1) = req(&app, "PUT", &format!("/api/challenges/{cid}/days/1/checkin"), Some(tok1), Some(json!({ "payload": { "kept": [false] } }))).await;
     assert_eq!(st, StatusCode::OK);
     let seq1 = r1["seq"].as_i64().unwrap();
 
@@ -244,14 +195,7 @@ async fn events_windows_and_sequencing() {
     let seq2 = r2["seq"].as_i64().unwrap();
     assert!(seq2 > seq1);
 
-    let (st, r3) = req(
-        &app,
-        "PUT",
-        &format!("/api/challenges/{cid}/days/1/checkin"),
-        Some(tok1),
-        Some(json!({ "payload": { "kept": [true] } })),
-    )
-    .await;
+    let (st, r3) = req(&app, "PUT", &format!("/api/challenges/{cid}/days/1/checkin"), Some(tok1), Some(json!({ "payload": { "kept": [true] } }))).await;
     assert_eq!(st, StatusCode::OK);
     let seq3 = r3["seq"].as_i64().unwrap();
     assert!(seq3 > seq2);
@@ -267,67 +211,29 @@ async fn events_windows_and_sequencing() {
     assert_eq!(arr[0]["payload"]["kept"][0], true);
 
     // Day 2 has not started yet -> 409
-    let (st, _) = req(
-        &app,
-        "PUT",
-        &format!("/api/challenges/{cid}/days/2/checkin"),
-        Some(tok1),
-        Some(json!({ "payload": { "kind": "binary", "done": true } })),
-    )
-    .await;
+    let (st, _) =
+        req(&app, "PUT", &format!("/api/challenges/{cid}/days/2/checkin"), Some(tok1), Some(json!({ "payload": { "kind": "binary", "done": true } }))).await;
     assert_eq!(st, StatusCode::CONFLICT);
 
     // Day 1 hash before Dawn -> 409
-    let (st, _) = req(
-        &app,
-        "PUT",
-        &format!("/api/challenges/{cid}/days/1/hash"),
-        Some(tok1),
-        Some(json!({ "payload": "deadbeef" })),
-    )
-    .await;
+    let (st, _) = req(&app, "PUT", &format!("/api/challenges/{cid}/days/1/hash"), Some(tok1), Some(json!({ "payload": "deadbeef" }))).await;
     assert_eq!(st, StatusCode::CONFLICT);
 
     // Oversized payload (> 8 KB) -> 413
     let big = "x".repeat(9000);
-    let (st, _) = req(
-        &app,
-        "PUT",
-        &format!("/api/challenges/{cid}/days/1/orders"),
-        Some(tok1),
-        Some(json!({ "payload": { "junk": big } })),
-    )
-    .await;
+    let (st, _) = req(&app, "PUT", &format!("/api/challenges/{cid}/days/1/orders"), Some(tok1), Some(json!({ "payload": { "junk": big } }))).await;
     assert_eq!(st, StatusCode::PAYLOAD_TOO_LARGE);
 
     // Shift challenge startDate back 3 days in DB to simulate Day 1 Dawn having passed
     let past = (chrono::Utc::now().date_naive() - chrono::Duration::days(3)).format("%Y-%m-%d").to_string();
-    state
-        .db
-        .lock()
-        .unwrap()
-        .execute("UPDATE challenges SET config_json = ?1 WHERE id = ?2", params![valid_config(&past).to_string(), cid])
-        .unwrap();
+    state.db.lock().unwrap().execute("UPDATE challenges SET config_json = ?1 WHERE id = ?2", params![valid_config(&past).to_string(), cid]).unwrap();
 
     // Now Day 1 checkin is closed (409), while Day 1 hash is allowed (200)
-    let (st, _) = req(
-        &app,
-        "PUT",
-        &format!("/api/challenges/{cid}/days/1/checkin"),
-        Some(tok1),
-        Some(json!({ "payload": { "kind": "binary", "done": false } })),
-    )
-    .await;
+    let (st, _) =
+        req(&app, "PUT", &format!("/api/challenges/{cid}/days/1/checkin"), Some(tok1), Some(json!({ "payload": { "kind": "binary", "done": false } }))).await;
     assert_eq!(st, StatusCode::CONFLICT);
 
-    let (st, _) = req(
-        &app,
-        "PUT",
-        &format!("/api/challenges/{cid}/days/1/hash"),
-        Some(tok1),
-        Some(json!({ "payload": "6473104f" })),
-    )
-    .await;
+    let (st, _) = req(&app, "PUT", &format!("/api/challenges/{cid}/days/1/hash"), Some(tok1), Some(json!({ "payload": "6473104f" }))).await;
     assert_eq!(st, StatusCode::OK);
 }
 
@@ -363,14 +269,7 @@ async fn push_endpoints() {
     .await;
     assert_eq!(st, StatusCode::NO_CONTENT);
 
-    let (st, _) = req(
-        &app,
-        "DELETE",
-        "/api/push/subscribe",
-        Some(tok1),
-        Some(json!({ "endpoint": "https://push.example.com/sub/1" })),
-    )
-    .await;
+    let (st, _) = req(&app, "DELETE", "/api/push/subscribe", Some(tok1), Some(json!({ "endpoint": "https://push.example.com/sub/1" }))).await;
     assert_eq!(st, StatusCode::NO_CONTENT);
 }
 
