@@ -1,0 +1,16 @@
+# dependencies & build output
+node_modules/
+client/dist/
+server/target/
+
+# local runtime data (server)
+*.db
+*.db-shm
+*.db-wal
+*.pem
+
+# editor / OS
+.DS_Store
+*.swp
+.idea/
+.vscode/

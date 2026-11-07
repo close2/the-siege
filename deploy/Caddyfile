@@ -1,0 +1,9 @@
+# Sample Caddyfile for The Siege v2 (automatic HTTPS + reverse proxy + compression)
+siege.example.com {
+    encode zstd gzip
+
+    @immutable path /assets/*.webp /assets/assets.gen.json
+    header @immutable Cache-Control "public, max-age=31536000, immutable"
+
+    reverse_proxy 127.0.0.1:8080
+}

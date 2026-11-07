@@ -1,0 +1,368 @@
+{
+ "app_icon": {
+  "w": 512,
+  "h": 512,
+  "anchorX": 0.5,
+  "anchorY": 0.5
+ },
+ "boss_sugar_wraith": {
+  "w": 381,
+  "h": 480,
+  "anchorX": 0.5,
+  "anchorY": 0.97
+ },
+ "boss_sugar_wraith_attack": {
+  "w": 473,
+  "h": 480,
+  "anchorX": 0.5,
+  "anchorY": 0.97
+ },
+ "building_archer_1": {
+  "w": 203,
+  "h": 400,
+  "anchorX": 0.5,
+  "anchorY": 0.89
+ },
+ "building_archer_2": {
+  "w": 285,
+  "h": 450,
+  "anchorX": 0.5,
+  "anchorY": 0.862
+ },
+ "building_archer_3": {
+  "w": 353,
+  "h": 520,
+  "anchorX": 0.5,
+  "anchorY": 0.852
+ },
+ "building_barracks_1": {
+  "w": 316,
+  "h": 320,
+  "anchorX": 0.5,
+  "anchorY": 0.785
+ },
+ "building_barracks_2": {
+  "w": 384,
+  "h": 360,
+  "anchorX": 0.5,
+  "anchorY": 0.768
+ },
+ "building_barracks_3": {
+  "w": 367,
+  "h": 400,
+  "anchorX": 0.5,
+  "anchorY": 0.801
+ },
+ "building_catapult_1": {
+  "w": 305,
+  "h": 300,
+  "anchorX": 0.5,
+  "anchorY": 0.779
+ },
+ "building_catapult_2": {
+  "w": 344,
+  "h": 340,
+  "anchorX": 0.5,
+  "anchorY": 0.78
+ },
+ "building_catapult_3": {
+  "w": 396,
+  "h": 400,
+  "anchorX": 0.5,
+  "anchorY": 0.785
+ },
+ "building_mage_1": {
+  "w": 184,
+  "h": 400,
+  "anchorX": 0.5,
+  "anchorY": 0.9
+ },
+ "building_mage_2": {
+  "w": 210,
+  "h": 450,
+  "anchorX": 0.5,
+  "anchorY": 0.899
+ },
+ "building_mage_3": {
+  "w": 271,
+  "h": 520,
+  "anchorX": 0.5,
+  "anchorY": 0.887
+ },
+ "enemy_sugar_brute": {
+  "w": 199,
+  "h": 220,
+  "anchorX": 0.5,
+  "anchorY": 0.97
+ },
+ "enemy_sugar_flyer": {
+  "w": 222,
+  "h": 140,
+  "anchorX": 0.5,
+  "anchorY": 0.5
+ },
+ "enemy_sugar_grunt": {
+  "w": 116,
+  "h": 130,
+  "anchorX": 0.5,
+  "anchorY": 0.97
+ },
+ "enemy_sugar_runner": {
+  "w": 136,
+  "h": 120,
+  "anchorX": 0.5,
+  "anchorY": 0.97
+ },
+ "enemy_sugar_siege": {
+  "w": 234,
+  "h": 260,
+  "anchorX": 0.5,
+  "anchorY": 0.97
+ },
+ "hero_knight": {
+  "w": 186,
+  "h": 200,
+  "anchorX": 0.5,
+  "anchorY": 0.97
+ },
+ "hero_knight_attack": {
+  "w": 172,
+  "h": 200,
+  "anchorX": 0.5,
+  "anchorY": 0.97
+ },
+ "hero_priest": {
+  "w": 175,
+  "h": 200,
+  "anchorX": 0.5,
+  "anchorY": 0.97
+ },
+ "hero_priest_attack": {
+  "w": 177,
+  "h": 200,
+  "anchorX": 0.5,
+  "anchorY": 0.97
+ },
+ "hero_ranger": {
+  "w": 184,
+  "h": 200,
+  "anchorX": 0.5,
+  "anchorY": 0.97
+ },
+ "hero_ranger_attack": {
+  "w": 179,
+  "h": 200,
+  "anchorX": 0.5,
+  "anchorY": 0.97
+ },
+ "icon_armor": {
+  "w": 108,
+  "h": 128,
+  "anchorX": 0.5,
+  "anchorY": 0.5
+ },
+ "icon_check": {
+  "w": 130,
+  "h": 128,
+  "anchorX": 0.5,
+  "anchorY": 0.5
+ },
+ "icon_flying": {
+  "w": 126,
+  "h": 128,
+  "anchorX": 0.5,
+  "anchorY": 0.5
+ },
+ "icon_gold": {
+  "w": 132,
+  "h": 128,
+  "anchorX": 0.5,
+  "anchorY": 0.5
+ },
+ "icon_heart": {
+  "w": 129,
+  "h": 128,
+  "anchorX": 0.5,
+  "anchorY": 0.5
+ },
+ "icon_magic": {
+  "w": 127,
+  "h": 128,
+  "anchorX": 0.5,
+  "anchorY": 0.5
+ },
+ "icon_physical": {
+  "w": 126,
+  "h": 128,
+  "anchorX": 0.5,
+  "anchorY": 0.5
+ },
+ "icon_rally": {
+  "w": 132,
+  "h": 128,
+  "anchorX": 0.5,
+  "anchorY": 0.5
+ },
+ "icon_repair": {
+  "w": 132,
+  "h": 128,
+  "anchorX": 0.5,
+  "anchorY": 0.5
+ },
+ "icon_siege": {
+  "w": 142,
+  "h": 128,
+  "anchorX": 0.5,
+  "anchorY": 0.5
+ },
+ "icon_star": {
+  "w": 131,
+  "h": 128,
+  "anchorX": 0.5,
+  "anchorY": 0.5
+ },
+ "icon_star_empty": {
+  "w": 131,
+  "h": 128,
+  "anchorX": 0.5,
+  "anchorY": 0.5
+ },
+ "icon_streak": {
+  "w": 119,
+  "h": 128,
+  "anchorX": 0.5,
+  "anchorY": 0.5
+ },
+ "keep_1": {
+  "w": 566,
+  "h": 720,
+  "anchorX": 0.5,
+  "anchorY": 0.829
+ },
+ "keep_2": {
+  "w": 749,
+  "h": 810,
+  "anchorX": 0.5,
+  "anchorY": 0.799
+ },
+ "keep_3": {
+  "w": 698,
+  "h": 900,
+  "anchorX": 0.5,
+  "anchorY": 0.831
+ },
+ "keyart_defeat": {
+  "w": 768,
+  "h": 768,
+  "anchorX": 0.5,
+  "anchorY": 0.5
+ },
+ "keyart_title": {
+  "w": 1376,
+  "h": 768,
+  "anchorX": 0.5,
+  "anchorY": 0.5
+ },
+ "keyart_victory": {
+  "w": 768,
+  "h": 768,
+  "anchorX": 0.5,
+  "anchorY": 0.5
+ },
+ "map_valley": {
+  "w": 2048,
+  "h": 2048,
+  "anchorX": 0.5,
+  "anchorY": 0.5
+ },
+ "pad_empty": {
+  "w": 250,
+  "h": 200,
+  "anchorX": 0.5,
+  "anchorY": 0.5
+ },
+ "portrait_boss_sugar": {
+  "w": 281,
+  "h": 320,
+  "anchorX": 0.5,
+  "anchorY": 0.5
+ },
+ "portrait_knight": {
+  "w": 289,
+  "h": 320,
+  "anchorX": 0.5,
+  "anchorY": 0.5
+ },
+ "portrait_priest": {
+  "w": 285,
+  "h": 320,
+  "anchorX": 0.5,
+  "anchorY": 0.5
+ },
+ "portrait_ranger": {
+  "w": 307,
+  "h": 320,
+  "anchorX": 0.5,
+  "anchorY": 0.5
+ },
+ "proj_arrow": {
+  "w": 69,
+  "h": 24,
+  "anchorX": 0.5,
+  "anchorY": 0.5
+ },
+ "proj_rock": {
+  "w": 49,
+  "h": 48,
+  "anchorX": 0.5,
+  "anchorY": 0.5
+ },
+ "rubble": {
+  "w": 239,
+  "h": 240,
+  "anchorX": 0.5,
+  "anchorY": 0.784
+ },
+ "soldier_footman": {
+  "w": 117,
+  "h": 150,
+  "anchorX": 0.5,
+  "anchorY": 0.97
+ },
+ "soldier_footman_attack": {
+  "w": 170,
+  "h": 150,
+  "anchorX": 0.5,
+  "anchorY": 0.97
+ },
+ "ui_banner": {
+  "w": 191,
+  "h": 240,
+  "anchorX": 0.5,
+  "anchorY": 0.97
+ },
+ "ui_button": {
+  "w": 227,
+  "h": 160,
+  "anchorX": 0.5,
+  "anchorY": 0.5
+ },
+ "ui_button_gold": {
+  "w": 227,
+  "h": 160,
+  "anchorX": 0.5,
+  "anchorY": 0.5
+ },
+ "ui_panel": {
+  "w": 523,
+  "h": 512,
+  "anchorX": 0.5,
+  "anchorY": 0.5
+ },
+ "ui_ribbon": {
+  "w": 408,
+  "h": 160,
+  "anchorX": 0.5,
+  "anchorY": 0.5
+ }
+}
