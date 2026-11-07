@@ -87,3 +87,11 @@ Environment variables:
    sudo cp -r client/dist /opt/siege/client
    ```
 3. Install and enable the systemd unit (`deploy/siege.service`), configure HTTPS reverse proxy (`deploy/Caddyfile`), and install the daily hot backup script (`deploy/backup.sh` → `/etc/cron.daily/siege-backup`).
+
+---
+
+## License
+
+Copyright 2026 Christian Loitsch
+
+Licensed under the [Apache License, Version 2.0](LICENSE). This covers the code as well as the artwork in `art/` and `client/public/`.
