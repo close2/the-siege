@@ -1,6 +1,6 @@
-# CI for the Rust server binary (server/).
-# - every push / PR touching the server: rustfmt, clippy, tests
-# - pushes to main and tags: release binaries for x86_64 and aarch64 Linux (workflow artifacts)
+# CI for the Rust server binary (server/) and bundled PWA client (client/).
+# - every push / PR: rustfmt, clippy, server & client tests, client production build
+# - pushes to main and tags: release archives (server binary + built client/dist + deploy files) for x86_64 and aarch64 Linux
 # - tags `server-v*`: additionally published as a GitHub release
 name: server
 
@@ -10,11 +10,13 @@ on:
     tags: ['server-v*']
     paths:
       - 'server/**'
+      - 'client/**'
       - 'docs/calendar-vectors.json'
       - '.github/workflows/server.yml'
   pull_request:
     paths:
       - 'server/**'
+      - 'client/**'
       - 'docs/calendar-vectors.json'
       - '.github/workflows/server.yml'
   workflow_dispatch:
@@ -52,6 +54,23 @@ jobs:
       - run: cargo clippy --locked --all-targets -- -D warnings
       # tests read ../docs/calendar-vectors.json, the contract shared with client/src/sim/calendar.ts
       - run: cargo test --locked
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+      - name: Client test & build
+        working-directory: client
+        run: |
+          npm ci
+          npm test
+          npm run build
+      - uses: actions/upload-artifact@v4
+        if: github.event_name != 'pull_request'
+        with:
+          name: client-dist
+          path: client/dist
+          if-no-files-found: error
 
   build:
     name: release · ${{ matrix.arch }}
@@ -76,12 +95,17 @@ jobs:
           workspaces: server
           key: release-${{ matrix.arch }}
       - run: cargo build --locked --release
+      - uses: actions/download-artifact@v4
+        with:
+          name: client-dist
+          path: client/dist
       - name: Package
         id: pkg
         run: |
           name="siege-server-${{ matrix.arch }}-linux-gnu"
           mkdir -p "dist/$name"
           cp target/release/siege-server ../LICENSE ../deploy/siege.service ../deploy/Caddyfile ../deploy/backup.sh "dist/$name/"
+          cp -r ../client/dist "dist/$name/client"
           tar -C dist -czf "dist/$name.tar.gz" "$name"
           (cd dist && sha256sum "$name.tar.gz" > "$name.tar.gz.sha256")
           echo "name=$name" >> "$GITHUB_OUTPUT"
@@ -103,6 +127,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
+          pattern: siege-server-*
           path: artifacts
           merge-multiple: true
       - name: Publish

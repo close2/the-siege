@@ -54,10 +54,12 @@ export class ApiError extends Error {
   }
 }
 
+export const DRY_RUN_ID = 'dryrun';
+
 export interface Backend {
   readonly mode: 'local' | 'http';
-  /** server-corrected time (ms) */
-  now(): number;
+  /** server-corrected time (ms); pass challengeId to include any per-challenge demo offset */
+  now(challengeId?: string): number;
   me(): Promise<User | null>;
   register(name: string): Promise<User>;
   rename(name: string): Promise<void>;
@@ -65,6 +67,8 @@ export interface Backend {
   claim(code: string): Promise<User>;
   listChallenges(): Promise<Challenge[]>;
   createChallenge(config: ChallengeConfig, heroClass: HeroClass, opts?: { bots?: number }): Promise<Challenge>;
+  /** create or reset the local 3-day guided dry-run challenge with bot teammates */
+  startDryRun(heroClass?: HeroClass): Promise<Challenge>;
   inviteInfo(code: string): Promise<ChallengeSummary>;
   join(code: string, heroClass: HeroClass): Promise<Challenge>;
   getChallenge(id: string): Promise<Challenge>;
@@ -73,7 +77,7 @@ export interface Backend {
   pushKey(): Promise<string | null>;
   pushSubscribe(sub: PushSubscriptionJSON): Promise<void>;
   pushUnsubscribe(endpoint: string): Promise<void>;
-  /** local mode only: jump the clock just past the next Dawn */
+  /** local / dry-run mode: jump the clock just past the next Dawn */
   skipToNextDawn?(id: string): Promise<void>;
   /** pop any queued offline-sync notice (e.g. write dropped because Dawn passed) */
   popNotice?(): string | null;

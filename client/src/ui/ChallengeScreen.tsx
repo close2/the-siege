@@ -1,16 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '../App';
 import { ECON, SIM_VERSION } from '../content/stats';
+import { DRY_RUN_ID } from '../net/types';
 import { GameCanvas } from '../render/GameCanvas';
 import type { GameView, ReplayPlayer } from '../render/GameView';
 import { sound } from '../render/Sound';
 import { sectorById } from '../sim/map';
 import type { Checkin, Order, PadId, PlayerId } from '../sim/types';
 import { useSeason, type SeasonView } from '../state/useSeason';
-import { Gold, Icon, PLAYER_COLORS, Toast, cssColor, fmtDuration, portraitUrl, useNow } from './common';
+import { Gold, Icon, PLAYER_COLORS, Sheet, Toast, cssColor, fmtDuration, portraitUrl, useNow } from './common';
 import { BuildSheet, CheckInSheet, DawnReport, IntentSheet, PlanSheet } from './sheets';
+import { TutorialContent } from './Tutorial';
 
-type SheetState = { kind: 'checkin' } | { kind: 'build'; pad: PadId } | { kind: 'plan' } | { kind: 'intent' } | { kind: 'report'; day: number } | { kind: 'menu' } | null;
+type SheetState = { kind: 'checkin' } | { kind: 'build'; pad: PadId } | { kind: 'plan' } | { kind: 'intent' } | { kind: 'report'; day: number } | { kind: 'menu' } | { kind: 'tutorial' } | null;
 
 export function ChallengeScreen({ id }: { id: string }) {
   const { backend, user, navigate } = useApp();
@@ -21,7 +23,10 @@ export function ChallengeScreen({ id }: { id: string }) {
   const [toast, setToast] = useState<string | null>(null);
   const [replay, setReplay] = useState<{ day: number; player: ReplayPlayer } | null>(null);
   const [speed, setSpeed] = useState(1);
+  const [scoutedDay, setScoutedDay] = useState(0);
+  const [coachCollapsed, setCoachCollapsed] = useState(false);
   const seenKey = `siege.seen.${id}`;
+  const isDryRun = id === DRY_RUN_ID;
 
   const owners = useMemo(() => {
     if (!view) return {};
@@ -48,7 +53,10 @@ export function ChallengeScreen({ id }: { id: string }) {
       if (owner === user.id && view.planDay) setSheet({ kind: 'build', pad });
       else if (owner) setToast(`${owners[owner]?.name ?? '?'}'s plot`);
     };
-    v.onIntentTap = () => setSheet({ kind: 'intent' });
+    v.onIntentTap = () => {
+      if (view.planDay) setScoutedDay(view.planDay);
+      setSheet({ kind: 'intent' });
+    };
     (window as unknown as { __siegeDebug: unknown }).__siegeDebug = {
       myPadScreen: () => {
         const pads = view.setup.map.sectors.flatMap((sc) => sc.pads).filter((p) => view.state.pads[p.id]?.owner === user.id && !view.state.pads[p.id]?.building);
@@ -133,7 +141,7 @@ export function ChallengeScreen({ id }: { id: string }) {
     putOrders(view.planDay, orders).catch((e) => setToast((e as Error).message));
   };
 
-  const now = useNow(1000, backend.now.bind(backend));
+  const now = useNow(1000, () => backend.now(id));
 
   if (error && !view) return <div className="screen error">{error}</div>;
   if (!view)
@@ -151,6 +159,27 @@ export function ChallengeScreen({ id }: { id: string }) {
   const totalStars = view.state.stars.reduce((a, b) => a + b, 0) + view.state.bonusStars;
   const missingCheckin = clock.open.some((d) => !view.myCheckin(d));
   const nextDawn = view.planDay ? clock.windows[view.planDay - 1].dawn : null;
+  const canSkipDawn = Boolean(backend.skipToNextDawn && (backend.mode === 'local' || view.challenge.local));
+  const myHeroClass = view.challenge.members.find((m) => m.userId === me)?.heroClass ?? 'knight';
+
+  const openScout = () => {
+    if (view.planDay) setScoutedDay(view.planDay);
+    setSheet({ kind: 'intent' });
+  };
+
+  const centerMyPlots = () => {
+    const v = gv.current;
+    if (!v) return;
+    const f = myFocus(view)[0];
+    if (f) v.viewport.moveCenter((f.x + view.setup.map.keep.x) / 2, (f.y + view.setup.map.keep.y) / 2);
+  };
+
+  const restartDryRun = async () => {
+    await backend.startDryRun(myHeroClass);
+    setScoutedDay(0);
+    setSheet(null);
+    await refresh();
+  };
 
   // ---------- lobby ----------
   if (!clock.started) {
@@ -170,7 +199,7 @@ export function ChallengeScreen({ id }: { id: string }) {
           <div>
             The siege begins in <b>{fmtDuration(clock.windows[0].open - now)}</b> ({setup.config.startDate}) and lasts {setup.config.days} days.
           </div>
-          {backend.mode === 'http' && (
+          {backend.mode === 'http' && !view.challenge.local && (
             <>
               <div>Invite friends — they can join until the start:</div>
               <div className="title center" style={{ fontSize: 28, letterSpacing: '0.15em' }}>
@@ -190,7 +219,7 @@ export function ChallengeScreen({ id }: { id: string }) {
               </button>
             </>
           )}
-          {backend.skipToNextDawn && (
+          {canSkipDawn && (
             <button
               className="btn block"
               onClick={async () => {
@@ -266,6 +295,27 @@ export function ChallengeScreen({ id }: { id: string }) {
               );
             })}
         </div>
+        {isDryRun && !replay && (
+          <DryRunCoach
+            view={view}
+            gold={gold}
+            unseenDawn={unseenDawn}
+            scouted={scoutedDay === view.planDay}
+            collapsed={coachCollapsed}
+            onToggleCollapse={() => setCoachCollapsed((c) => !c)}
+            onScout={openScout}
+            onReport={() => setSheet({ kind: 'checkin' })}
+            onFocusPlots={centerMyPlots}
+            onPlan={() => setSheet({ kind: 'plan' })}
+            onSkipDawn={async () => {
+              await backend.skipToNextDawn!(id);
+              await refresh();
+            }}
+            onRestart={restartDryRun}
+            onNewChallenge={() => navigate('/new')}
+            onTutorial={() => setSheet({ kind: 'tutorial' })}
+          />
+        )}
         {view.simVersionMismatch && (
           <div className="error" style={{ fontSize: 12 }}>
             ⚠ This challenge uses game rules v{view.challenge.simVersion}, this app runs v{SIM_VERSION}. Battles may differ from your teammates' — please update the app.
@@ -315,7 +365,7 @@ export function ChallengeScreen({ id }: { id: string }) {
                 ⚒ Plan
                 {view.myOrders.length > 0 && <span className="badge-dot" style={{ background: '#3a8a3a' }}>{view.myOrders.length}</span>}
               </button>
-              <button className="btn" disabled={!view.state.intent} onClick={() => setSheet({ kind: 'intent' })}>
+              <button className="btn" disabled={!view.state.intent} onClick={openScout}>
                 👁 Scout
               </button>
               <button className="btn" onClick={() => setSheet({ kind: 'menu' })} style={{ maxWidth: 56 }}>
@@ -345,6 +395,9 @@ export function ChallengeScreen({ id }: { id: string }) {
         <div className="sheet-backdrop" onClick={() => setSheet(null)}>
           <div className="sheet panel col" onClick={(e) => e.stopPropagation()}>
             <h3>Menu</h3>
+            <button className="btn block" onClick={() => setSheet({ kind: 'tutorial' })}>
+              📖 How to play
+            </button>
             {resolved > 0 && (
               <button className="btn block" onClick={() => startReplay(resolved)}>
                 ↻ Replay Dawn {resolved}
@@ -355,7 +408,7 @@ export function ChallengeScreen({ id }: { id: string }) {
                 📜 Last report
               </button>
             )}
-            {backend.mode === 'http' && (
+            {backend.mode === 'http' && !view.challenge.local && (
               <button
                 className="btn block"
                 onClick={async () => {
@@ -368,7 +421,7 @@ export function ChallengeScreen({ id }: { id: string }) {
                 ✉ Invite code: {view.challenge.inviteCode}
               </button>
             )}
-            {backend.skipToNextDawn && !clock.finished && (
+            {canSkipDawn && !clock.finished && (
               <button
                 className="btn block"
                 onClick={async () => {
@@ -380,6 +433,11 @@ export function ChallengeScreen({ id }: { id: string }) {
                 ⏩ Skip to next Dawn (demo)
               </button>
             )}
+            {isDryRun && (
+              <button className="btn block" onClick={restartDryRun}>
+                ↻ Restart dry run
+              </button>
+            )}
             <button className="btn block" onClick={() => navigate('/settings')}>
               ⚙ Settings
             </button>
@@ -389,7 +447,205 @@ export function ChallengeScreen({ id }: { id: string }) {
           </div>
         </div>
       )}
+      {sheet?.kind === 'tutorial' && (
+        <Sheet wide onClose={() => setSheet(null)}>
+          <h2>How to Play</h2>
+          <TutorialContent
+            inDryRun={isDryRun}
+            onStartDryRun={async (hc) => {
+              await backend.startDryRun(hc);
+              setSheet(null);
+              navigate(`/c/${DRY_RUN_ID}`);
+            }}
+          />
+        </Sheet>
+      )}
       {toast && <Toast text={toast} onDone={() => setToast(null)} />}
+    </div>
+  );
+}
+
+function DryRunCoach({
+  view,
+  gold,
+  unseenDawn,
+  scouted,
+  collapsed,
+  onToggleCollapse,
+  onScout,
+  onReport,
+  onFocusPlots,
+  onPlan,
+  onSkipDawn,
+  onRestart,
+  onNewChallenge,
+  onTutorial,
+}: {
+  view: SeasonView;
+  gold: number;
+  unseenDawn: number | null;
+  scouted: boolean;
+  collapsed: boolean;
+  onToggleCollapse: () => void;
+  onScout: () => void;
+  onReport: () => void;
+  onFocusPlots: () => void;
+  onPlan: () => void;
+  onSkipDawn: () => void;
+  onRestart: () => void;
+  onNewChallenge: () => void;
+  onTutorial: () => void;
+}) {
+  const boxStyle: React.CSSProperties = {
+    background: 'rgba(16, 22, 34, 0.92)',
+    border: '1px solid rgba(244, 198, 78, 0.65)',
+    borderRadius: 10,
+    padding: collapsed ? '4px 10px' : '8px 10px',
+    marginTop: 4,
+    fontSize: 12.5,
+    lineHeight: 1.35,
+    maxWidth: 540,
+    marginLeft: 'auto',
+    marginRight: 'auto',
+  };
+
+  if (collapsed) {
+    return (
+      <div style={boxStyle} className="row">
+        <b className="grow" style={{ color: 'var(--gold)' }}>
+          🎯 Dry Run Guide {unseenDawn ? `· Dawn ${unseenDawn} ready` : view.planDay ? `· Day ${view.planDay} of ${view.setup.config.days}` : '· Complete'}
+        </b>
+        <button className="linkbtn" style={{ padding: 0, fontSize: 12 }} onClick={onToggleCollapse}>
+          Show ▾
+        </button>
+      </div>
+    );
+  }
+
+  if (unseenDawn) {
+    return (
+      <div style={boxStyle} className="col">
+        <div className="row" style={{ justifyContent: 'space-between' }}>
+          <b style={{ color: 'var(--gold)' }}>☀ Step 4 · Dawn {unseenDawn} has arrived!</b>
+          <button className="linkbtn" style={{ padding: 0, fontSize: 12 }} onClick={onToggleCollapse}>
+            Hide ▴
+          </button>
+        </div>
+        <div>
+          All reports and plans have locked in, gold was paid, towers were built, and the battle was fought. Tap <b>☀ Watch Dawn {unseenDawn}</b> at the bottom to watch the replay!
+        </div>
+      </div>
+    );
+  }
+
+  if (view.clock.finished) {
+    return (
+      <div style={boxStyle} className="col">
+        <div className="row" style={{ justifyContent: 'space-between' }}>
+          <b style={{ color: 'var(--gold)' }}>🎉 Dry Run Complete!</b>
+          <button className="linkbtn" style={{ padding: 0, fontSize: 12 }} onClick={onToggleCollapse}>
+            Hide ▴
+          </button>
+        </div>
+        <div>
+          You completed all 3 days and faced the Boss! In a real challenge, each day stays open until the next morning's Dawn ({view.setup.config.dawnTime}).
+        </div>
+        <div className="row" style={{ flexWrap: 'wrap', gap: 6 }}>
+          <button className="btn small" onClick={onRestart}>
+            ↻ Restart dry run
+          </button>
+          <button className="btn small gold" onClick={onNewChallenge}>
+            ⚔ Start real challenge
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const day = view.planDay ?? 1;
+  const reported = Boolean(view.myCheckin(day));
+  const hasOrders = view.myOrders.length > 0;
+
+  let hint: React.ReactNode;
+  if (!scouted) {
+    hint =
+      day === 1 ? (
+        <>
+          <b>Step 1 · Scout:</b> Tap <b>👁 Scout</b> (or a red road arrow) to see which roads the horde will attack tonight and what enemy types are marching.
+        </>
+      ) : day === 2 ? (
+        <>
+          <b>Day 2 · Tougher foes:</b> New enemy types unlock as the season progresses. Tap <b>👁 Scout</b> to inspect tonight's roads!
+        </>
+      ) : (
+        <>
+          <b>Day 3 · Boss Night!</b> On the final night (and every 7th day), <b>The Sugar Wraith</b> marches. Tap <b>👁 Scout</b> to find the Boss road!
+        </>
+      );
+  } else if (!reported) {
+    hint =
+      day === 1 ? (
+        <>
+          <b>Step 2 · Report your habit:</b> Tap <b>✔ Report</b> to log today's checklist. Hitting your target earns full gold (+72g) and +2 Hero XP; even an honest partial/missed report still earns gold and triggers the <b>Team Rally</b> (+15% tower speed)!
+        </>
+      ) : (
+        <>
+          <b>Step 2 · Report for Day {day}:</b> Tap <b>✔ Report</b>. (Tip: try checking only 1 or 2 boxes to see how partial reports still pay gold, or check all 3 for full gold!)
+        </>
+      );
+  } else if (!hasOrders) {
+    hint =
+      day === 1 ? (
+        <>
+          <b>Step 3 · Build towers ({gold}g available):</b> Tap your <b>glowing plots</b> on the valley map to build towers (try an <b>Archer Tower</b> and a <b>Barracks</b>), or open <b>⚒ Plan</b> to set your Hero's stance.
+        </>
+      ) : day === 2 ? (
+        <>
+          <b>Step 3 · Upgrade & share ({gold}g available):</b> Tap an existing tower to <b>Upgrade</b> it to Level 2, build a <b>Mage Tower</b> against armoured enemies, or donate gold to the <b>Keep</b> in <b>⚒ Plan</b>.
+        </>
+      ) : (
+        <>
+          <b>Step 3 · Boss Night prep ({gold}g available):</b> Build/upgrade towers and open <b>⚒ Plan</b> to send your <b>Hero</b> to reinforce the road the Boss is attacking!
+        </>
+      );
+  } else {
+    hint = (
+      <>
+        <b>Step 4 · Ready for Dawn {day}!</b> In a real challenge, you'd now wait until tomorrow morning ({view.setup.config.dawnTime}). In this dry run, tap <b>⏩ Skip to Dawn {day}</b> below!
+      </>
+    );
+  }
+
+  return (
+    <div style={{ ...boxStyle, gap: 6 }} className="col">
+      <div className="row" style={{ justifyContent: 'space-between' }}>
+        <b style={{ color: 'var(--gold)' }}>
+          🎯 Dry Run · Day {day} of {view.setup.config.days}
+        </b>
+        <div className="row" style={{ gap: 10 }}>
+          <button className="linkbtn" style={{ padding: 0, fontSize: 12 }} onClick={onTutorial}>
+            📖 Guide
+          </button>
+          <button className="linkbtn" style={{ padding: 0, fontSize: 12 }} onClick={onToggleCollapse}>
+            Hide ▴
+          </button>
+        </div>
+      </div>
+      <div className="row" style={{ flexWrap: 'wrap', gap: 4 }}>
+        <button type="button" className="chip" style={{ cursor: 'pointer', borderColor: scouted ? 'var(--green)' : undefined }} onClick={onScout}>
+          {scouted ? '✓' : '1.'} Scout
+        </button>
+        <button type="button" className="chip" style={{ cursor: 'pointer', borderColor: reported ? 'var(--green)' : undefined }} onClick={onReport}>
+          {reported ? '✓' : '2.'} Report
+        </button>
+        <button type="button" className="chip" style={{ cursor: 'pointer', borderColor: hasOrders ? 'var(--green)' : undefined }} onClick={hasOrders ? onPlan : onFocusPlots}>
+          {hasOrders ? '✓' : '3.'} Build & Plan
+        </button>
+        <button type="button" className="chip" style={{ cursor: 'pointer', borderColor: 'var(--gold)', color: 'var(--gold)' }} onClick={onSkipDawn}>
+          ⏩ Skip to Dawn {day}
+        </button>
+      </div>
+      <div>{hint}</div>
     </div>
   );
 }

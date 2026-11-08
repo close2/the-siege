@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import type { Backend, User } from '../net/types';
+import { Sheet } from './common';
+import { TutorialContent } from './Tutorial';
 
 export function Onboarding({ backend, onDone }: { backend: Backend; onDone: (u: User) => void }) {
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
   const [mode, setMode] = useState<'new' | 'code'>('new');
+  const [showTutorial, setShowTutorial] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -38,6 +41,9 @@ export function Onboarding({ backend, onDone }: { backend: Backend; onDone: (u: 
             <button className="btn gold block" disabled={busy || name.trim().length < 2}>
               Begin
             </button>
+            <button type="button" className="linkbtn" style={{ color: '#7a4a10' }} onClick={() => setShowTutorial(true)}>
+              📖 New here? How The Siege works
+            </button>
             {backend.mode === 'http' && (
               <button type="button" className="linkbtn" style={{ color: '#7a4a10' }} onClick={() => setMode('code')}>
                 I already play on another device
@@ -63,6 +69,12 @@ export function Onboarding({ backend, onDone }: { backend: Backend; onDone: (u: 
         {error && <div className="error">{error}</div>}
         {backend.mode === 'local' && <div className="muted" style={{ fontSize: 12 }}>Offline demo mode: progress is stored on this device; teammates are bots.</div>}
       </form>
+      {showTutorial && (
+        <Sheet wide onClose={() => setShowTutorial(false)}>
+          <h2>How to Play</h2>
+          <TutorialContent />
+        </Sheet>
+      )}
     </div>
   );
 }

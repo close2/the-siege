@@ -67,7 +67,7 @@ export interface SeasonView {
 export function useSeason(backend: Backend, id: string, me: PlayerId) {
   const [challenge, setChallenge] = useState<Challenge | null>(null);
   const [events, setEvents] = useState<EventIndex>(new Map());
-  const [now, setNow] = useState(backend.now());
+  const [now, setNow] = useState(backend.now(id));
   const [error, setError] = useState<string | null>(null);
   const seqRef = useRef(0);
   const sentHashesRef = useRef<Set<number>>(new Set());
@@ -76,7 +76,7 @@ export function useSeason(backend: Backend, id: string, me: PlayerId) {
 
   const pull = useCallback(async () => {
     try {
-      if (challengeRef.current && !seasonClock(challengeRef.current.config, backend.now()).started) {
+      if (challengeRef.current && !seasonClock(challengeRef.current.config, backend.now(id)).started) {
         const c = await backend.getChallenge(id);
         setChallenge(c);
       }
@@ -91,7 +91,7 @@ export function useSeason(backend: Backend, id: string, me: PlayerId) {
           return next;
         });
       }
-      setNow(backend.now());
+      setNow(backend.now(id));
       setError(null);
     } catch (e) {
       setError((e as Error).message);
@@ -111,7 +111,7 @@ export function useSeason(backend: Backend, id: string, me: PlayerId) {
     const poll = setInterval(() => {
       if (document.visibilityState === 'visible') void pull();
     }, 30_000);
-    const clock = setInterval(() => setNow(backend.now()), 5_000);
+    const clock = setInterval(() => setNow(backend.now(id)), 5_000);
     const onVis = () => document.visibilityState === 'visible' && void pull();
     document.addEventListener('visibilitychange', onVis);
     return () => {
@@ -181,7 +181,7 @@ export function useSeason(backend: Backend, id: string, me: PlayerId) {
 
   // upload state hashes for resolved days (desync detection)
   useEffect(() => {
-    if (!view || backend.mode !== 'http') return;
+    if (!view || backend.mode !== 'http' || view.challenge.local) return;
     const pending: Promise<void>[] = [];
     for (let d = 1; d <= view.clock.resolved; d++) {
       if (events.has(ekey(d, me, 'hash')) || sentHashesRef.current.has(d)) continue;
@@ -199,7 +199,7 @@ export function useSeason(backend: Backend, id: string, me: PlayerId) {
   const optimistic = (day: number, kind: 'checkin' | 'orders', payload: unknown) =>
     setEvents((prev) => {
       const next = new Map(prev);
-      next.set(ekey(day, me, kind), { seq: -1, day, userId: me, kind, payload, updatedAt: backend.now() });
+      next.set(ekey(day, me, kind), { seq: -1, day, userId: me, kind, payload, updatedAt: backend.now(id) });
       return next;
     });
 
@@ -216,7 +216,7 @@ export function useSeason(backend: Backend, id: string, me: PlayerId) {
   };
 
   const refresh = async () => {
-    setNow(backend.now());
+    setNow(backend.now(id));
     await pull();
   };
 

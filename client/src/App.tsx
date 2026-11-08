@@ -7,6 +7,7 @@ import { Home } from './ui/Home';
 import { Join } from './ui/Join';
 import { Onboarding } from './ui/Onboarding';
 import { Settings } from './ui/Settings';
+import { TutorialScreen } from './ui/Tutorial';
 
 // dev tools are split into their own chunks so they never weigh on the player-facing bundle
 const Sandbox = lazy(() => import('./dev/Sandbox').then((m) => ({ default: m.Sandbox })));
@@ -90,6 +91,7 @@ export function App() {
   if (joinMatch) screen = <Join code={joinMatch[1]} />;
   else if (cMatch) screen = <ChallengeScreen key={cMatch[1]} id={cMatch[1]} />;
   else if (path === '/new') screen = <CreateChallenge />;
+  else if (path === '/tutorial') screen = <TutorialScreen />;
   else if (path === '/settings') screen = <Settings />;
   else screen = <Home />;
   return <Ctx.Provider value={ctx}>{screen}</Ctx.Provider>;

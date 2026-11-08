@@ -1,6 +1,7 @@
 // Backend talking to the Rust server (same origin, /api).
 import type { ChallengeConfig, HeroClass } from '../sim/types';
-import { ApiError, type Backend, type Challenge, type ChallengeSummary, type EventKind, type GameEvent, type User } from './types';
+import { LocalBackend } from './LocalBackend';
+import { ApiError, DRY_RUN_ID, type Backend, type Challenge, type ChallengeSummary, type EventKind, type GameEvent, type User } from './types';
 
 const TOKEN = 'siege.token';
 const QUEUE = 'siege.queue';
@@ -19,8 +20,10 @@ export class HttpBackend implements Backend {
   private user: User | null = null;
   private notices: string[] = [];
   private flushing: Promise<string[]> | null = null;
+  private local = new LocalBackend();
 
   async init() {
+    await this.local.init();
     await this.syncTime();
     window.addEventListener('online', () => void this.flushQueue());
     void this.flushQueue();
@@ -37,7 +40,8 @@ export class HttpBackend implements Backend {
     this.offset = r.now - (t0 + t1) / 2;
   }
 
-  now() {
+  now(challengeId?: string) {
+    if (challengeId === DRY_RUN_ID) return this.local.now(challengeId);
     return Date.now() + this.offset;
   }
 
@@ -69,6 +73,7 @@ export class HttpBackend implements Backend {
     if (this.user) return this.user;
     try {
       this.user = await this.req<User>('GET', '/api/me');
+      this.local.ensureUser(this.user);
       return this.user;
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) {
@@ -84,6 +89,7 @@ export class HttpBackend implements Backend {
     this.token = r.token;
     localStorage.setItem(TOKEN, r.token);
     this.user = { id: r.userId, name };
+    this.local.ensureUser(this.user);
   }
 
   async register(name: string) {
@@ -94,7 +100,10 @@ export class HttpBackend implements Backend {
 
   async rename(name: string) {
     await this.req('PUT', '/api/me', { name });
-    if (this.user) this.user.name = name;
+    if (this.user) {
+      this.user.name = name;
+      this.local.ensureUser(this.user);
+    }
   }
 
   transferCode() {
@@ -107,12 +116,19 @@ export class HttpBackend implements Backend {
     return this.user!;
   }
 
-  listChallenges() {
-    return this.req<Challenge[]>('GET', '/api/challenges');
+  async listChallenges() {
+    const remote = await this.req<Challenge[]>('GET', '/api/challenges');
+    const dry = this.local.getDryRun();
+    return dry ? [dry, ...remote] : remote;
   }
 
   createChallenge(config: ChallengeConfig, heroClass: HeroClass) {
     return this.req<Challenge>('POST', '/api/challenges', { config, heroClass });
+  }
+
+  async startDryRun(heroClass?: HeroClass) {
+    if (this.user) this.local.ensureUser(this.user);
+    return this.local.startDryRun(heroClass);
   }
 
   inviteInfo(code: string) {
@@ -124,10 +140,12 @@ export class HttpBackend implements Backend {
   }
 
   getChallenge(id: string) {
+    if (id === DRY_RUN_ID) return this.local.getChallenge(id);
     return this.req<Challenge>('GET', `/api/challenges/${id}`);
   }
 
   async putEvent(id: string, day: number, kind: EventKind, payload: unknown) {
+    if (id === DRY_RUN_ID) return this.local.putEvent(id, day, kind, payload);
     try {
       await this.req('PUT', `/api/challenges/${id}/days/${day}/${kind}`, { payload });
     } catch (e) {
@@ -186,10 +204,15 @@ export class HttpBackend implements Backend {
   }
 
   async events(id: string, since: number) {
+    if (id === DRY_RUN_ID) return this.local.events(id, since);
     // retry offline writes first so they're included (or reported as dropped) on every poll
     if (this.queue().length) await this.flushQueue();
     const r = await this.req<{ events: GameEvent[]; now: number }>('GET', `/api/challenges/${id}/events?since=${since}`);
     return r.events;
+  }
+
+  async skipToNextDawn(id: string) {
+    if (id === DRY_RUN_ID) await this.local.skipToNextDawn(id);
   }
 
   async pushKey() {

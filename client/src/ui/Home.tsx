@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useApp } from '../App';
-import type { Challenge } from '../net/types';
+import { DRY_RUN_ID, type Challenge } from '../net/types';
 import { seasonClock } from '../sim/calendar';
 import { fmtDuration, portraitUrl } from './common';
 
@@ -23,13 +23,24 @@ export function Home() {
       .catch((e) => setError((e as Error).message));
   }, [backend, navigate]);
 
-  const now = backend.now();
+  const startDryRun = async () => {
+    try {
+      await backend.startDryRun();
+      navigate(`/c/${DRY_RUN_ID}`);
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
+
   return (
     <div className="screen bg-art col">
       <div className="row">
         <h1 className="grow" style={{ margin: 0, textShadow: '0 2px 8px #000' }}>
           The Siege
         </h1>
+        <button className="btn small" onClick={() => navigate('/tutorial')}>
+          📖 Help
+        </button>
         <button className="btn small" onClick={() => navigate('/settings')}>
           ⚙ {user.name}
         </button>
@@ -38,18 +49,28 @@ export function Home() {
       {error && <div className="error">{error}</div>}
 
       {list && list.length === 0 && (
-        <div className="panel center">
+        <div className="panel center col">
           <h2>No sieges yet</h2>
-          <p>Start a challenge with friends — or join one with an invite code.</p>
+          <p style={{ margin: 0 }}>Start a challenge with friends — or learn the ropes with a guided dry run.</p>
+          <div className="row" style={{ justifyContent: 'center', flexWrap: 'wrap', marginTop: 4 }}>
+            <button className="btn small" onClick={() => navigate('/tutorial')}>
+              📖 How to play
+            </button>
+            <button className="btn small gold" onClick={startDryRun}>
+              🎯 Try a dry run
+            </button>
+          </div>
         </div>
       )}
       {list?.map((c) => {
-        const clock = seasonClock(c.config, now);
+        const cNow = backend.now(c.id);
+        const clock = seasonClock(c.config, cNow);
         const me = c.members.find((m) => m.userId === user.id);
+        const isDry = c.id === DRY_RUN_ID;
         const status = clock.finished
           ? 'Season over'
           : !clock.started
-            ? `Starts in ${fmtDuration(clock.windows[0].open - now)}`
+            ? `Starts in ${fmtDuration(clock.windows[0].open - cNow)}`
             : `Day ${Math.min(c.config.days, clock.resolved + 1)} of ${c.config.days}`;
         return (
           <button key={c.id} className="option panel" style={{ border: undefined, padding: 4 }} onClick={() => navigate(`/c/${c.id}`)}>
@@ -59,6 +80,7 @@ export function Home() {
                 {c.config.title}
               </div>
               <div style={{ fontSize: 13 }}>
+                {isDry ? 'Practice · ' : ''}
                 {status} · {c.members.length} defenders
               </div>
             </div>
@@ -83,6 +105,11 @@ export function Home() {
             Join
           </button>
         </form>
+      )}
+      {list && list.length > 0 && !list.some((c) => c.id === DRY_RUN_ID) && (
+        <button className="btn block" onClick={startDryRun}>
+          🎯 Practice in a 3-day dry run
+        </button>
       )}
     </div>
   );
