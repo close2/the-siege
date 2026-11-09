@@ -50,12 +50,14 @@ export function ChallengeScreen({ id }: { id: string }) {
     v.onPadTap = (pad) => {
       const owner = view.state.pads[pad]?.owner;
       if (replay) return;
-      if (owner === user.id && view.planDay) setSheet({ kind: 'build', pad });
+      if (owner === user.id && view.planDay) setTimeout(() => setSheet({ kind: 'build', pad }), 0);
       else if (owner) setToast(`${owners[owner]?.name ?? '?'}'s plot`);
     };
     v.onIntentTap = () => {
-      if (view.planDay) setScoutedDay(view.planDay);
-      setSheet({ kind: 'intent' });
+      setTimeout(() => {
+        if (view.planDay) setScoutedDay(view.planDay);
+        setSheet({ kind: 'intent' });
+      }, 0);
     };
     (window as unknown as { __siegeDebug: unknown }).__siegeDebug = {
       myPadScreen: () => {

@@ -122,7 +122,10 @@ export function useSeason(backend: Backend, id: string, me: PlayerId) {
     };
   }, [backend, id, pull]);
 
-  const resolvedKey = challenge ? seasonClock(challenge.config, now).resolved : 0;
+  const rawClock = challenge ? seasonClock(challenge.config, now) : null;
+  const resolvedKey = rawClock ? rawClock.resolved : 0;
+  const clockKey = rawClock ? `${rawClock.started}|${rawClock.resolved}|${rawClock.next}|${rawClock.finished}|${rawClock.open.join(',')}` : '';
+  const clock = useMemo(() => (challenge ? seasonClock(challenge.config, now) : null), [challenge, clockKey]);
 
   // heavy part: replay all resolved days (only when events or resolved count change)
   const replay = useMemo(() => {
@@ -142,8 +145,7 @@ export function useSeason(backend: Backend, id: string, me: PlayerId) {
   }, [challenge, events, resolvedKey]);
 
   const view = useMemo<SeasonView | null>(() => {
-    if (!challenge || !replay) return null;
-    const clock = seasonClock(challenge.config, now);
+    if (!challenge || !replay || !clock) return null;
     const { setup, bots, states, reports, battles } = replay;
     const state = states[states.length - 1];
     const planDay = clock.next !== null && clock.started ? clock.next : null;
@@ -177,7 +179,7 @@ export function useSeason(backend: Backend, id: string, me: PlayerId) {
       desyncDay,
       simVersionMismatch: challenge.simVersion !== SIM_VERSION,
     };
-  }, [challenge, replay, now, events, me]);
+  }, [challenge, replay, clock, events, me]);
 
   // upload state hashes for resolved days (desync detection)
   useEffect(() => {

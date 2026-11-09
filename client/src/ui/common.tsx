@@ -22,9 +22,37 @@ export function portraitUrl(heroClass: HeroClass) {
 }
 
 export function Sheet({ onClose, children, wide }: { onClose: () => void; children: ReactNode; wide?: boolean }) {
+  const downOnBackdrop = useRef(false);
+  const downInSheet = useRef(false);
+  const mountedAt = useRef(performance.now());
   return (
-    <div className="sheet-backdrop" onClick={onClose}>
-      <div className="sheet panel" style={{ position: 'relative', maxWidth: wide ? 720 : undefined }} onClick={(e) => e.stopPropagation()}>
+    <div
+      className="sheet-backdrop"
+      onPointerDown={(e) => {
+        downOnBackdrop.current = e.target === e.currentTarget;
+      }}
+      onClick={(e) => {
+        if (e.target !== e.currentTarget) return;
+        if (!downOnBackdrop.current && e.detail > 0 && performance.now() - mountedAt.current < 350) return;
+        downOnBackdrop.current = false;
+        onClose();
+      }}
+    >
+      <div
+        className="sheet panel"
+        style={{ position: 'relative', maxWidth: wide ? 720 : undefined }}
+        onPointerDown={() => {
+          downInSheet.current = true;
+        }}
+        onClickCapture={(e) => {
+          if (!downInSheet.current && e.detail > 0 && performance.now() - mountedAt.current < 350) {
+            e.stopPropagation();
+            e.preventDefault();
+          }
+          downInSheet.current = false;
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
         <button className="close" onClick={onClose} aria-label="close">
           ✕
         </button>

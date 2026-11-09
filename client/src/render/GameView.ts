@@ -80,6 +80,8 @@ export class GameView {
     this.app.stage.addChild(this.viewport);
     this.viewport.addChild(this.world);
     this.entities.sortableChildren = true;
+    this.fxLayer.eventMode = 'none';
+    this.textLayer.eventMode = 'none';
     this.world.addChild(this.ground, this.entities, this.fxLayer, this.overlay, this.textLayer);
     for (const ev of ['drag-start', 'pinch-start', 'wheel-start'] as const) this.viewport.on(ev, () => (this.lastUserInput = performance.now()));
     this.vfx = new Vfx(this.fxLayer, this.textLayer, this.assets.softDot);
@@ -128,9 +130,7 @@ export class GameView {
         ps.anchor.set(art.anchorX, art.anchorY);
         ps.scale.set(art.scale);
         ps.position.set(pad.x, pad.y);
-        ps.eventMode = 'static';
-        ps.cursor = 'pointer';
-        ps.on('pointertap', () => this.onPadTap?.(pad.id));
+        this.bindTap(ps, () => this.onPadTap?.(pad.id));
         this.ground.addChild(ps);
         if (st?.building) {
           const v = this.setBuilding(pad.id, pad.x, pad.y, st.building.type, st.building.level, st.building.hp);
@@ -165,6 +165,7 @@ export class GameView {
     this.keepSprite.scale.set(ka.scale);
     this.keepSprite.position.set(map.keep.x, map.keep.y);
     this.keepSprite.zIndex = map.keep.y;
+    this.keepSprite.eventMode = 'none';
     this.entities.addChild(this.keepSprite);
     if (opts.rally) this.addRallyBanner(map.keep.x, this.keepTopY - 12);
     if (opts.animate && this.lastKeepLevel > 0 && keep.level > this.lastKeepLevel) {
@@ -197,6 +198,7 @@ export class GameView {
     c.addChild(t);
     c.position.set(x, y);
     c.zIndex = 99999;
+    c.eventMode = 'none';
     this.overlay.addChild(c);
   }
 
@@ -226,7 +228,29 @@ export class GameView {
     c.addChild(t);
     c.position.set(x, y);
     c.zIndex = y;
+    c.eventMode = 'none';
     this.entities.addChild(c);
+  }
+
+  private bindTap(target: Container, fn: () => void) {
+    let downX = 0;
+    let downY = 0;
+    let down = false;
+    target.eventMode = 'static';
+    target.cursor = 'pointer';
+    target.on('pointerdown', (e) => {
+      down = true;
+      downX = e.global.x;
+      downY = e.global.y;
+    });
+    target.on('pointertap', (e) => {
+      if (down && Math.hypot(e.global.x - downX, e.global.y - downY) > 10) {
+        down = false;
+        return;
+      }
+      down = false;
+      fn();
+    });
   }
 
   private showIntent(map: MapDef, intent: Intent, theme: string) {
@@ -259,9 +283,7 @@ export class GameView {
       label.anchor.set(0.5, 0);
       label.position.set(at.x, at.y + 6);
       c.addChild(label);
-      c.eventMode = 'static';
-      c.cursor = 'pointer';
-      c.on('pointertap', () => this.onIntentTap?.(d));
+      this.bindTap(c, () => this.onIntentTap?.(d));
       this.overlay.addChild(c);
     }
   }
@@ -272,10 +294,12 @@ export class GameView {
       const s = new Sprite(a.texture);
       s.width = map.width;
       s.height = map.height;
+      s.eventMode = 'none';
       this.ground.addChild(s);
       return;
     }
     const g = new Graphics();
+    g.eventMode = 'none';
     g.rect(0, 0, map.width, map.height).fill(0x5d8a3a);
     // some meadow variation
     for (let i = 0; i < 60; i++) {
@@ -302,9 +326,8 @@ export class GameView {
     if (!v) {
       v = new BuildingView(art);
       v.position.set(x, y);
-      v.eventMode = 'static';
-      v.cursor = 'pointer';
-      v.on('pointertap', () => this.onPadTap?.(padId));
+      v.zIndex = y;
+      this.bindTap(v, () => this.onPadTap?.(padId));
       this.entities.addChild(v);
       this.buildingViews.set(padId, v);
     } else {

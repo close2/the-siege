@@ -1,5 +1,5 @@
 // Sprite views with procedural animation (art is static; all motion is code).
-import { Container, Graphics, Sprite, type Texture } from 'pixi.js';
+import { Container, Graphics, Rectangle, Sprite, type Texture } from 'pixi.js';
 import type { ArtTexture } from './assets';
 
 function drawBar(g: Graphics, w: number, frac: number, color: number) {
@@ -155,6 +155,7 @@ export class BuildingView extends Container {
 
   constructor(art: ArtTexture) {
     super();
+    this.interactiveChildren = false;
     const shadow = new Graphics();
     shadow.ellipse(0, 0, 46, 16).fill({ color: 0x000000, alpha: 0.25 });
     this.addChild(shadow);
@@ -166,12 +167,22 @@ export class BuildingView extends Container {
     this.bar = new Graphics();
     this.bar.y = this.topY - 10;
     this.addChild(this.bar);
+    this.updateHitArea(art);
+  }
+
+  private updateHitArea(art: ArtTexture) {
+    const w = Math.max(100, art.texture.width * art.scale);
+    const h = art.texture.height * art.scale;
+    const top = -h * art.anchorY;
+    const bot = Math.max(30, h * (1 - art.anchorY));
+    this.hitArea = new Rectangle(-w / 2, top, w, bot - top);
   }
 
   setArt(art: ArtTexture) {
     this.sprite.texture = art.texture;
     this.sprite.anchor.set(art.anchorX, art.anchorY);
     this.sprite.scale.set(art.scale);
+    this.updateHitArea(art);
   }
 
   fire() {
