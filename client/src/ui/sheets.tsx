@@ -3,7 +3,7 @@ import { BUILD_COST, BUILDING_HP, ENEMIES, HEROES, TOWERS, BARRACKS, ECON, KEEP 
 import { enemyArtId } from '../content/artSpec';
 import { getTheme } from '../content/themes';
 import { ratio, dayGold, heroLevel } from '../sim/economy';
-import { padById, sectorById, sectorsPerPlayer } from '../sim/map';
+import { padById, padRange, sectorById, sectorsPerPlayer } from '../sim/map';
 import { repairCost, upgradeCost } from '../sim/orders';
 import { seasonRank } from '../sim/season';
 import type { BuildingType, Checkin, DayReport, Dir, EnemyRole, Order, PadId, PlayerId } from '../sim/types';
@@ -24,16 +24,16 @@ function enemyImg(theme: string, role: EnemyRole) {
   return `/assets/${enemyArtId(theme, role)}.webp`;
 }
 
-function towerLine(type: BuildingType, level: number, rangeBonus = 0) {
+function towerLine(type: BuildingType, level: number, ranges?: Record<string, number>) {
   if (type === 'barracks') return `${BARRACKS.soldiers[level - 1]} soldiers · ${BARRACKS.hp[level - 1]} HP each`;
   const t = TOWERS[type];
-  return `${t.dmg[level - 1]} dmg · range ${t.range[level - 1] + rangeBonus}`;
+  return `${t.dmg[level - 1]} dmg · range ${padRange(ranges, t.range[level - 1])}`;
 }
 
-/** effective tower range on a pad (base range + the pad's fairness bonus); null for barracks */
+/** effective tower range on a pad (fairness table, see PadDef.ranges); null for barracks */
 export function towerRange(view: SeasonView, padId: PadId, type: BuildingType, level: number): number | null {
   if (type === 'barracks') return null;
-  return TOWERS[type].range[level - 1] + (padById(view.setup.map, padId)?.pad.rangeBonus ?? 0);
+  return padRange(padById(view.setup.map, padId)?.pad.ranges, TOWERS[type].range[level - 1]);
 }
 
 const STANCE_HELP = {
@@ -144,7 +144,7 @@ export function BuildSheet({ view, padId, onOrders, onClose }: { view: SeasonVie
   const before = view.state.pads[padId];
   const b = pad.building;
   const planned = view.myOrders.filter((o) => 'pad' in o && o.pad === padId);
-  const bonus = padById(view.setup.map, padId)?.pad.rangeBonus ?? 0;
+  const bonus = padById(view.setup.map, padId)?.pad.ranges;
   const add = (o: Order) => {
     onOrders([...view.myOrders, o]);
     onClose();

@@ -16,7 +16,7 @@ import {
   ECON,
 } from '../content/stats';
 import { heroMultipliers } from './economy';
-import { dist2, makePath, pointAt, type Path } from './map';
+import { dist2, makePath, padRange, pointAt, type Path } from './map';
 import { rngFor } from './rng';
 import type {
   BattleResult,
@@ -106,7 +106,7 @@ export interface BuildingE {
   maxHp: number;
   cd: number;
   alive: boolean;
-  rangeBonus: number;
+  ranges: Record<string, number> | undefined;
 }
 
 export interface KeepE {
@@ -196,7 +196,7 @@ export class Battle {
 
     for (const b of setup.buildings) {
       const maxHp = BUILDING_HP[b.level - 1];
-      this.buildings.push({ padId: b.padId, owner: b.owner, type: b.type, level: b.level, x: b.x, y: b.y, hp: b.hp, maxHp, cd: 0, alive: b.hp > 0, rangeBonus: b.rangeBonus ?? 0 });
+      this.buildings.push({ padId: b.padId, owner: b.owner, type: b.type, level: b.level, x: b.x, y: b.y, hp: b.hp, maxHp, cd: 0, alive: b.hp > 0, ranges: b.ranges });
       if (b.owner) this.ensureStats(b.owner);
       if (b.type === 'barracks' && b.hp > 0) {
         const n = BARRACKS.soldiers[b.level - 1];
@@ -522,7 +522,7 @@ export class Battle {
       const ts = TOWERS[b.type];
       if (b.cd > 0) b.cd -= DT;
       if (b.cd > 0) continue;
-      const range = ts.range[b.level - 1] + b.rangeBonus;
+      const range = padRange(b.ranges, ts.range[b.level - 1]);
       const target = this.findTarget(b, range, ts.minRange ?? 0, ts.hitsFlying);
       if (!target) continue;
       b.cd += 1 / (ts.rate * this.fireMult);

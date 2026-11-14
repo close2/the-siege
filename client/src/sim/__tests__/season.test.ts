@@ -151,7 +151,7 @@ describe('season', () => {
     const { hashes } = botSeason(demoSetup(4), 0.8);
     console.log('golden', hashes[hashes.length - 1]);
     expect(hashes).toHaveLength(30);
-    expect(hashes[29]).toBe('7fd72587');
+    expect(hashes[29]).toBe('6473104f');
   });
 
   it.skipIf(!process.env.BALANCE)('200-season balance distribution across difficulties', () => {
@@ -193,22 +193,32 @@ describe('feedback fixes', () => {
     }
   });
 
-  it('every pad covers about the same road length at the reference range', async () => {
+  it('every pad covers about the same length of its own road, for every tower type and level', async () => {
     const { VALLEY } = await import('../fixtures');
-    const samples: { x: number; y: number; w: number }[] = [];
-    for (const pts of Object.values(VALLEY.roads))
+    const { TOWERS } = await import('../../content/stats');
+    const { padRange } = await import('../map');
+    const samples: Record<string, { x: number; y: number; w: number }[]> = {};
+    for (const [road, pts] of Object.entries(VALLEY.roads)) {
+      const list: { x: number; y: number; w: number }[] = (samples[road] = []);
       for (let i = 1; i < pts.length; i++) {
         const a = pts[i - 1];
         const b = pts[i];
         const len = Math.sqrt((b.x - a.x) ** 2 + (b.y - a.y) ** 2);
         const n = Math.max(1, Math.round(len / 2));
-        for (let k = 0; k < n; k++) samples.push({ x: a.x + ((b.x - a.x) * (k + 0.5)) / n, y: a.y + ((b.y - a.y) * (k + 0.5)) / n, w: len / n });
+        for (let k = 0; k < n; k++) list.push({ x: a.x + ((b.x - a.x) * (k + 0.5)) / n, y: a.y + ((b.y - a.y) * (k + 0.5)) / n, w: len / n });
       }
-    const covs = VALLEY.sectors.flatMap((s) => s.pads).map((p) => {
-      const r = 140 + (p.rangeBonus ?? 0);
-      return samples.reduce((acc, q) => acc + ((q.x - p.x) ** 2 + (q.y - p.y) ** 2 <= r * r ? q.w : 0), 0);
-    });
-    expect(Math.min(...covs)).toBeGreaterThan(0.9 * Math.max(...covs));
+    }
+    const bases = [...new Set(Object.values(TOWERS).flatMap((t) => t.range))];
+    for (const base of bases) {
+      const covs = VALLEY.sectors.flatMap((s) =>
+        s.pads.map((p) => {
+          expect(p.ranges?.[String(base)], `${p.id} has no entry for range ${base} — run tools/pad-ranges.mjs`).toBeDefined();
+          const r = padRange(p.ranges, base);
+          return samples[s.road].reduce((acc, q) => acc + ((q.x - p.x) ** 2 + (q.y - p.y) ** 2 <= r * r ? q.w : 0), 0);
+        }),
+      );
+      expect(Math.min(...covs), `range ${base}`).toBeGreaterThan(0.85 * Math.max(...covs));
+    }
   });
 
   it('reports enemies that retreat at sunrise', () => {

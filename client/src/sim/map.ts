@@ -23,6 +23,11 @@ export function assignSectors(players: readonly SetupPlayer[]): Record<PlayerId,
   return out;
 }
 
+/** effective tower range on a pad: the pad's fairness table entry for this base range, or the base range */
+export function padRange(ranges: Record<string, number> | undefined, base: number): number {
+  return ranges?.[String(base)] ?? base;
+}
+
 export function sectorById(map: MapDef, id: SectorId): SectorDef | undefined {
   return map.sectors.find((s) => s.id === id);
 }

@@ -71,7 +71,7 @@ Every building has HP 300 / 450 / 600 (L1 / L2 / L3). At 0 HP it becomes **rubbl
 
 **Targeting** (all towers): the enemy in range that is **furthest along its path**. Ties go to the lower entity id.
 
-**Pad range bonus**: each pad has a precomputed integer `rangeBonus` (map JSON, `tools/pad-ranges.mjs`) that is added to every tower range on that pad, so an L1 archer covers the same road length (≈220 px) from every pad. Re-run the tool after moving pads.
+**Fair pad ranges**: each pad has a precomputed table `ranges` (map JSON, written by `tools/pad-ranges.mjs`) that maps every base tower range (120/130/140/155/170/180) to the effective range on that pad, so a tower of a given type and level covers the same length of its own sector's road from every pad (the 75th percentile of all pads at the base range). Re-run the tool after moving pads or changing tower ranges; a unit test checks the table.
 
 ## 6. Heroes
 One per player. The hero spawns at its stance sector's rally point and respawns 10 s after dying.

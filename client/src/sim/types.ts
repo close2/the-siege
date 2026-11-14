@@ -66,8 +66,8 @@ export interface SeasonSetup {
 
 export interface PadDef extends Pt {
   id: PadId;
-  /** added to every tower range on this pad so each pad covers the same road length (tools/pad-ranges.mjs) */
-  rangeBonus?: number;
+  /** base tower range → effective range on this pad, so every pad covers the same length of its own road (tools/pad-ranges.mjs) */
+  ranges?: Record<string, number>;
 }
 
 export interface SectorDef {
@@ -191,8 +191,8 @@ export interface BattleBuilding {
   y: number;
   /** barracks rally point */
   rally: Pt;
-  /** pad range bonus (see PadDef.rangeBonus) */
-  rangeBonus?: number;
+  /** pad range table (see PadDef.ranges) */
+  ranges?: Record<string, number>;
 }
 
 export interface BattleSetup {
