@@ -143,7 +143,10 @@ export const BATTLE = {
   maxSeconds: 120,
   meleeRange: 16,
   laneSpread: 14,
-  keepPostOffset: 90,
+  keepPostOffset: 40,
+  /** hero on "Defend the Keep": reaches every road end around the keep */
+  keepGuardAggro: 240,
+  keepGuardRange: 240,
 } as const;
 
 export const STARS = { twoStarKeepLoss: 0.1 } as const;

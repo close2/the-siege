@@ -71,8 +71,11 @@ Every building has HP 300 / 450 / 600 (L1 / L2 / L3). At 0 HP it becomes **rubbl
 
 **Targeting** (all towers): the enemy in range that is **furthest along its path**. Ties go to the lower entity id.
 
+**Pad range bonus**: each pad has a precomputed integer `rangeBonus` (map JSON, `tools/pad-ranges.mjs`) that is added to every tower range on that pad, so an L1 archer covers the same road length (≈220 px) from every pad. Re-run the tool after moving pads.
+
 ## 6. Heroes
 One per player. The hero spawns at its stance sector's rally point and respawns 10 s after dying.
+Stance **keep**: the hero is posted 40 px below the Keep and gets aggro ≥ 240 (blockers walk out) and, if ranged, range ≥ 240, so it reaches the end of every road.
 
 | Class | HP | Attack | Special |
 |---|---|---|---|
@@ -102,7 +105,7 @@ One per player. The hero spawns at its stance sector's rally point and respawns 
 - The intent UI shows, for each road: an arrow on the map, the role icons with counts, and a badge for the featured role ("Armoured!", "Flying!").
 
 ## 9. Battle (step 3)
-- Runs up to 120 s of sim time, and ends early once every enemy has died or leaked.
+- Runs up to 120 s of sim time, and ends early once every enemy has died or leaked. Enemies still alive at 120 s retreat at sunrise (no leak); they are listed in the Dawn report (`BattleResult.escaped`) and the replay shows a countdown.
 - Enemies follow their road polyline at their speed. When an enemy reaches the end, it **leaks**: Keep HP drops by its leak damage and the enemy is removed.
 - **Keep:** HP 100 / 130 / 160 (L1–L3). Keep archers: range 160, 8 / 12 / 16 dmg per shot at 1.5 shots/s, can hit flyers.
 - **Projectiles are resolved instantly in the sim,** with damage applied after a fixed travel delay: arrow 0.3 s, bolt 0.25 s, rock 0.8 s. The renderer animates the flight. This keeps the sim simple.

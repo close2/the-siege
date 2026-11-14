@@ -106,6 +106,7 @@ export interface BuildingE {
   maxHp: number;
   cd: number;
   alive: boolean;
+  rangeBonus: number;
 }
 
 export interface KeepE {
@@ -195,7 +196,7 @@ export class Battle {
 
     for (const b of setup.buildings) {
       const maxHp = BUILDING_HP[b.level - 1];
-      this.buildings.push({ padId: b.padId, owner: b.owner, type: b.type, level: b.level, x: b.x, y: b.y, hp: b.hp, maxHp, cd: 0, alive: b.hp > 0 });
+      this.buildings.push({ padId: b.padId, owner: b.owner, type: b.type, level: b.level, x: b.x, y: b.y, hp: b.hp, maxHp, cd: 0, alive: b.hp > 0, rangeBonus: b.rangeBonus ?? 0 });
       if (b.owner) this.ensureStats(b.owner);
       if (b.type === 'barracks' && b.hp > 0) {
         const n = BARRACKS.soldiers[b.level - 1];
@@ -213,6 +214,10 @@ export class Battle {
       d.maxHp = d.hp = d.maxHp * mult.hp;
       d.dmg *= mult.dmg;
       d.heal *= mult.dmg;
+      if (h.keepGuard) {
+        d.aggro = Math.max(d.aggro, BATTLE.keepGuardAggro);
+        if (d.range > 0) d.range = Math.max(d.range, BATTLE.keepGuardRange);
+      }
       this.defenders.push(d);
     }
     this.buildSchedule();
@@ -354,6 +359,7 @@ export class Battle {
       bossKilled: this.bossKilled,
       stats: this.stats,
       ticks: this.tick,
+      escaped: this.enemies.filter((e) => e.alive).map((e) => ({ role: e.role, hpPct: Math.round((100 * e.hp) / e.maxHp) })),
     };
   }
 
@@ -516,7 +522,7 @@ export class Battle {
       const ts = TOWERS[b.type];
       if (b.cd > 0) b.cd -= DT;
       if (b.cd > 0) continue;
-      const range = ts.range[b.level - 1];
+      const range = ts.range[b.level - 1] + b.rangeBonus;
       const target = this.findTarget(b, range, ts.minRange ?? 0, ts.hitsFlying);
       if (!target) continue;
       b.cd += 1 / (ts.rate * this.fireMult);

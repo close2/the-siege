@@ -68,7 +68,7 @@ export function buildBattleSetup(setup: SeasonSetup, state: SeasonState, statuse
     for (const pad of sec.pads) {
       const ps = state.pads[pad.id];
       if (!ps || !ps.building || ps.building.hp <= 0) continue;
-      buildings.push({ padId: pad.id, owner: ps.owner, type: ps.building.type, level: ps.building.level, hp: ps.building.hp, x: pad.x, y: pad.y, rally: sec.rally });
+      buildings.push({ padId: pad.id, owner: ps.owner, type: ps.building.type, level: ps.building.level, hp: ps.building.hp, x: pad.x, y: pad.y, rally: sec.rally, rangeBonus: pad.rangeBonus ?? 0 });
     }
   }
   const heroes: BattleHero[] = setup.players.map((p) => ({
@@ -77,6 +77,7 @@ export function buildBattleSetup(setup: SeasonSetup, state: SeasonState, statuse
     level: heroLevel(state.players[p.id].xp),
     status: statuses[p.id] ?? 'absent',
     post: heroPost(setup, state, p.id),
+    keepGuard: state.players[p.id].stance.mode === 'keep',
   }));
   return {
     seed: setup.seed,

@@ -222,5 +222,17 @@ export function useSeason(backend: Backend, id: string, me: PlayerId) {
     await pull();
   };
 
-  return { view, error, putCheckin, putOrders, refresh };
+  /** drop all cached events + challenge and refetch (e.g. after the dry run was restarted under the same id) */
+  const reload = async () => {
+    seqRef.current = 0;
+    sentHashesRef.current.clear();
+    setEvents(new Map());
+    const c = await backend.getChallenge(id);
+    challengeRef.current = c;
+    setChallenge(c);
+    setNow(backend.now(id));
+    await pull();
+  };
+
+  return { view, error, putCheckin, putOrders, refresh, reload };
 }

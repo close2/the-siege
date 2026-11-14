@@ -33,7 +33,12 @@ export interface ValleyOptions {
   rally?: boolean;
   /** animate buildings that differ from the previous showValley call */
   animate?: boolean;
+  /** my pads whose building I can afford to upgrade right now */
+  upgradable?: ReadonlySet<PadId>;
 }
+
+/** how far (world px) the camera may be pulled beyond the map edge, so edge pads can be moved out from under the HUD */
+const OVERSCROLL = 320;
 
 export class GameView {
   readonly app = new Application();
@@ -46,11 +51,13 @@ export class GameView {
   private fxLayer = new Container();
   private textLayer = new Container();
   private overlay = new Container();
-  private highlights: Graphics[] = [];
+  private highlights: Container[] = [];
   private intentMarkers: Graphics[] = [];
   private lastPadKeys = new Map<PadId, string>();
   private time = 0;
   private lastUserInput = 0;
+  private removeWindowListeners: (() => void) | null = null;
+  private rangeRing: Graphics | null = null;
   autoCamera = false;
   cameraFocus: { x: number; y: number }[] = [];
   private map: MapDef | null = null;
@@ -76,14 +83,39 @@ export class GameView {
     this.assets = new AssetStore(this.app.renderer as never);
     await this.assets.init();
     this.viewport = new Viewport({ screenWidth: el.clientWidth, screenHeight: el.clientHeight, worldWidth: 2048, worldHeight: 2048, events: this.app.renderer.events });
-    this.viewport.drag().pinch().wheel({ smooth: 4 }).decelerate({ friction: 0.92 }).clamp({ direction: 'all', underflow: 'center' });
+    this.viewport
+      .drag()
+      .pinch()
+      .wheel({ smooth: 4 })
+      .decelerate({ friction: 0.92 })
+      .clamp({ left: -OVERSCROLL, top: -OVERSCROLL, right: 2048 + OVERSCROLL, bottom: 2048 + OVERSCROLL, underflow: 'center' });
+    // A finger lifted over a DOM overlay (HUD) never reaches the canvas, leaving a "ghost" touch in
+    // pixi-viewport that breaks later drags/pinches. Drop such touches from window-level events.
+    const dropTouch = (e: PointerEvent) => {
+      const input = this.viewport?.input;
+      if (input) input.touches = input.touches.filter((t) => t.id !== e.pointerId);
+    };
+    const clearTouches = () => this.viewport?.input?.clear();
+    window.addEventListener('pointerup', dropTouch);
+    window.addEventListener('pointercancel', dropTouch);
+    window.addEventListener('blur', clearTouches);
+    this.removeWindowListeners = () => {
+      window.removeEventListener('pointerup', dropTouch);
+      window.removeEventListener('pointercancel', dropTouch);
+      window.removeEventListener('blur', clearTouches);
+    };
     this.app.stage.addChild(this.viewport);
     this.viewport.addChild(this.world);
     this.entities.sortableChildren = true;
     this.fxLayer.eventMode = 'none';
     this.textLayer.eventMode = 'none';
     this.world.addChild(this.ground, this.entities, this.fxLayer, this.overlay, this.textLayer);
-    for (const ev of ['drag-start', 'pinch-start', 'wheel-start'] as const) this.viewport.on(ev, () => (this.lastUserInput = performance.now()));
+    // the user takes over the camera: stop following the battle (📍 re-enables it)
+    for (const ev of ['drag-start', 'pinch-start', 'wheel-start'] as const)
+      this.viewport.on(ev, () => {
+        this.lastUserInput = performance.now();
+        this.autoCamera = false;
+      });
     this.vfx = new Vfx(this.fxLayer, this.textLayer, this.assets.softDot);
     this.app.renderer.on('resize', (w: number, h: number) => {
       this.viewport.resize(w, h, 2048, 2048);
@@ -104,6 +136,7 @@ export class GameView {
   destroy() {
     if (this.destroyed) return;
     this.destroyed = true;
+    this.removeWindowListeners?.();
     this.app.destroy(true, { children: true });
   }
 
@@ -117,6 +150,7 @@ export class GameView {
     this.overlay.removeChildren().forEach((c) => c.destroy({ children: true }));
     this.highlights = [];
     this.intentMarkers = [];
+    this.rangeRing = null;
     this.buildingViews.clear();
     this.vfx.clear();
     this.drawGround(map);
@@ -141,6 +175,7 @@ export class GameView {
             sound.play('build');
           }
           this.lastPadKeys.set(pad.id, key);
+          if (opts.upgradable?.has(pad.id)) this.addPadBadge(pad.x + 32, pad.y - 84, '⬆', 0x3a8a3a);
         } else {
           this.lastPadKeys.delete(pad.id);
           if (st?.rubble) this.setRubble(pad.id, pad.x, pad.y);
@@ -151,6 +186,7 @@ export class GameView {
             g.eventMode = 'none';
             this.overlay.addChild(g);
             this.highlights.push(g);
+            this.addPadBadge(pad.x, pad.y - 46, '+', 0xc8901a, () => this.onPadTap?.(pad.id));
           }
         }
       }
@@ -176,6 +212,39 @@ export class GameView {
       sound.play('victory');
     }
     this.lastKeepLevel = keep.level;
+  }
+
+  /** small round marker above a pad ("+" = free plot, "⬆" = upgrade affordable) */
+  private addPadBadge(x: number, y: number, label: string, color: number, onTap?: () => void) {
+    const c = new Container();
+    const bg = new Graphics();
+    bg.circle(0, 0, 22).fill({ color }).stroke({ width: 4, color: 0xfff1c0 });
+    c.addChild(bg);
+    const t = new Text({ text: label, style: { fontSize: 30, fontWeight: '900', fill: 0xffffff, stroke: { color: 0x1a0f08, width: 4 } } });
+    t.anchor.set(0.5);
+    t.y = -1;
+    c.addChild(t);
+    c.position.set(x, y);
+    c.zIndex = 99998;
+    if (onTap) this.bindTap(c, onTap);
+    else c.eventMode = 'none';
+    this.overlay.addChild(c);
+    this.highlights.push(c);
+  }
+
+  /** draw (or hide with null) a tower range ring on the map */
+  showRange(x: number, y: number, r: number | null) {
+    if (this.rangeRing) {
+      this.rangeRing.destroy();
+      this.rangeRing = null;
+    }
+    if (r === null || r <= 0) return;
+    const g = new Graphics();
+    g.circle(0, 0, r).fill({ color: 0xffe28a, alpha: 0.12 }).stroke({ width: 3, color: 0xffe28a, alpha: 0.85 });
+    g.position.set(x, y);
+    g.eventMode = 'none';
+    this.overlay.addChild(g);
+    this.rangeRing = g;
   }
 
   private addRallyBanner(x: number, y: number) {

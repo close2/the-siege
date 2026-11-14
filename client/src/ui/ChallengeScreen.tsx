@@ -1,22 +1,23 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '../App';
-import { ECON, SIM_VERSION } from '../content/stats';
+import { BATTLE, ECON, SIM_VERSION, TICK_RATE } from '../content/stats';
 import { DRY_RUN_ID } from '../net/types';
 import { GameCanvas } from '../render/GameCanvas';
 import type { GameView, ReplayPlayer } from '../render/GameView';
 import { sound } from '../render/Sound';
-import { sectorById } from '../sim/map';
+import { padById, sectorById } from '../sim/map';
+import { upgradeCost } from '../sim/orders';
 import type { Checkin, Order, PadId, PlayerId } from '../sim/types';
 import { useSeason, type SeasonView } from '../state/useSeason';
 import { Gold, Icon, PLAYER_COLORS, Sheet, Toast, cssColor, fmtDuration, portraitUrl, useNow } from './common';
-import { BuildSheet, CheckInSheet, DawnReport, IntentSheet, PlanSheet } from './sheets';
+import { BuildSheet, CheckInSheet, DawnReport, IntentSheet, PlanSheet, towerRange } from './sheets';
 import { TutorialContent } from './Tutorial';
 
 type SheetState = { kind: 'checkin' } | { kind: 'build'; pad: PadId } | { kind: 'plan' } | { kind: 'intent' } | { kind: 'report'; day: number } | { kind: 'menu' } | { kind: 'tutorial' } | null;
 
 export function ChallengeScreen({ id }: { id: string }) {
   const { backend, user, navigate } = useApp();
-  const { view, error, putCheckin, putOrders, refresh } = useSeason(backend, id, user.id);
+  const { view, error, putCheckin, putOrders, refresh, reload } = useSeason(backend, id, user.id);
   const gv = useRef<GameView | null>(null);
   const [ready, setReady] = useState(false);
   const [sheet, setSheet] = useState<SheetState>(null);
@@ -71,7 +72,16 @@ export function ChallengeScreen({ id }: { id: string }) {
     };
     if (replay) return;
     const st = view.preview?.state ?? view.state;
+    const myGold = st.players[user.id]?.gold ?? 0;
+    const upgradable = new Set<PadId>();
+    if (view.planDay)
+      for (const [pid, ps] of Object.entries(st.pads)) {
+        if (ps.owner !== user.id || !ps.building) continue;
+        const c = upgradeCost(ps.building.type, ps.building.level);
+        if (c !== null && c <= myGold) upgradable.add(pid);
+      }
     v.showValley(view.setup.map, st.pads, st.keep, {
+      upgradable,
       owners,
       me: user.id,
       intent: view.clock.finished ? null : view.state.intent,
@@ -80,6 +90,20 @@ export function ChallengeScreen({ id }: { id: string }) {
       animate: true,
     });
   }, [ready, view, replay, owners, user.id]);
+
+  // range ring for the plot whose build sheet is open (empty plot: L1 archer reach)
+  useEffect(() => {
+    const v = gv.current;
+    if (!v || !ready || !view) return;
+    if (sheet?.kind !== 'build' || replay) {
+      v.showRange(0, 0, null);
+      return;
+    }
+    const def = padById(view.setup.map, sheet.pad)?.pad;
+    const b = (view.preview?.state ?? view.state).pads[sheet.pad]?.building;
+    const r = towerRange(view, sheet.pad, b?.type ?? 'archer', b?.level ?? 1);
+    if (def) v.showRange(def.x, def.y, r);
+  }, [ready, view, sheet, replay]);
 
   const myFocus = useCallback(
     (vw: SeasonView) =>
@@ -140,7 +164,12 @@ export function ChallengeScreen({ id }: { id: string }) {
 
   const doOrders = (orders: Order[]) => {
     if (!view?.planDay) return;
-    putOrders(view.planDay, orders).catch((e) => setToast((e as Error).message));
+    // drop plans the preview already rejects for good (e.g. "pad occupied"); keep "not enough gold" (today's report may still pay for it)
+    const dead = new Set((view.preview?.players[user.id]?.skipped ?? []).filter((s) => s.reason !== 'not enough gold').map((s) => s.order));
+    putOrders(
+      view.planDay,
+      orders.filter((o) => !dead.has(o)),
+    ).catch((e) => setToast((e as Error).message));
   };
 
   const now = useNow(1000, () => backend.now(id));
@@ -173,14 +202,32 @@ export function ChallengeScreen({ id }: { id: string }) {
     const v = gv.current;
     if (!v) return;
     const f = myFocus(view)[0];
-    if (f) v.viewport.moveCenter((f.x + view.setup.map.keep.x) / 2, (f.y + view.setup.map.keep.y) / 2);
+    if (f) v.focus((f.x + view.setup.map.keep.x) / 2, (f.y + view.setup.map.keep.y) / 2);
+  };
+
+  // the dry run restarts under the same id: drop every cached event of the previous run
+  const afterDryRunRestart = async () => {
+    endReplay();
+    setScoutedDay(0);
+    setSheet(null);
+    setCoachCollapsed(false);
+    centered.current = false;
+    await reload();
   };
 
   const restartDryRun = async () => {
     await backend.startDryRun(myHeroClass);
-    setScoutedDay(0);
-    setSheet(null);
-    await refresh();
+    await afterDryRunRestart();
+  };
+
+  const centerMyPlotsAndFollow = () => {
+    centerMyPlots();
+    if (replay && gv.current) gv.current.autoCamera = true;
+  };
+
+  const focusPad = (pad: PadId) => {
+    const def = padById(view.setup.map, pad)?.pad;
+    if (def && gv.current) gv.current.focus(def.x, def.y + 80);
   };
 
   // ---------- lobby ----------
@@ -329,7 +376,10 @@ export function ChallengeScreen({ id }: { id: string }) {
 
       {replay ? (
         <>
-          <div className="dawn-banner">Dawn {replay.day}</div>
+          <div className="dawn-banner center">
+            Dawn {replay.day}
+            <ReplayClock player={replay.player} />
+          </div>
           <div className="replay-bar">
             {[1, 2, 4].map((s) => (
               <button
@@ -380,7 +430,15 @@ export function ChallengeScreen({ id }: { id: string }) {
 
       {sheet?.kind === 'checkin' && <CheckInSheet view={view} onSave={doCheckin} onClose={() => setSheet(null)} />}
       {sheet?.kind === 'build' && pv && <BuildSheet view={view} padId={sheet.pad} onOrders={doOrders} onClose={() => setSheet(null)} />}
-      {sheet?.kind === 'plan' && pv && <PlanSheet view={view} onOrders={doOrders} onClose={() => setSheet(null)} />}
+      {sheet?.kind === 'plan' && pv && <PlanSheet
+          view={view}
+          onOrders={doOrders}
+          onOpenPad={(pad) => {
+            focusPad(pad);
+            setSheet({ kind: 'build', pad });
+          }}
+          onClose={() => setSheet(null)}
+        />}
       {sheet?.kind === 'intent' && <IntentSheet view={view} onClose={() => setSheet(null)} />}
       {sheet?.kind === 'report' && view.reports[sheet.day - 1] && (
         <DawnReport
@@ -457,12 +515,36 @@ export function ChallengeScreen({ id }: { id: string }) {
             onStartDryRun={async (hc) => {
               await backend.startDryRun(hc);
               setSheet(null);
-              navigate(`/c/${DRY_RUN_ID}`);
+              if (isDryRun) await afterDryRunRestart();
+              else navigate(`/c/${DRY_RUN_ID}`);
             }}
           />
         </Sheet>
       )}
+      {!sheet && (
+        <button className="btn small recenter" onClick={centerMyPlotsAndFollow} title="Back to my plots" aria-label="Back to my plots">
+          📍
+        </button>
+      )}
       {toast && <Toast text={toast} onDone={() => setToast(null)} />}
+    </div>
+  );
+}
+
+/** battle clock during a replay: enemies still alive when it runs out retreat at sunrise */
+function ReplayClock({ player }: { player: ReplayPlayer }) {
+  useNow(250, () => player.battle.tick);
+  const left = Math.max(0, BATTLE.maxSeconds - player.battle.tick / TICK_RATE);
+  const over = player.battle.done;
+  const cleared = player.battle.enemies.length === 0;
+  const m = Math.floor(left / 60);
+  const s = Math.floor(left % 60);
+  return (
+    <div style={{ fontSize: 14, fontFamily: 'inherit', lineHeight: 1.2 }}>
+      {over ? (cleared ? '⚔ Horde defeated' : '☀ Sunrise') : `⏱ ${m}:${String(s).padStart(2, '0')}`}
+      <div style={{ fontSize: 11, fontWeight: 700, fontFamily: 'system-ui, sans-serif' }}>
+        {over ? (cleared ? 'every enemy fell or got through' : 'the surviving enemies retreat') : 'until sunrise — then surviving enemies retreat'}
+      </div>
     </div>
   );
 }
@@ -599,11 +681,11 @@ function DryRunCoach({
     hint =
       day === 1 ? (
         <>
-          <b>Step 3 · Build towers ({gold}g available):</b> Tap your <b>glowing plots</b> on the valley map to build towers (try an <b>Archer Tower</b> and a <b>Barracks</b>), or open <b>⚒ Plan</b> to set your Hero's stance.
+          <b>Step 3 · Build towers ({gold}g available):</b> Tap a gold <b>＋</b> on your plots to build towers (try an <b>Archer Tower</b> and a <b>Barracks</b>). <b>⚒ Plan</b> lists all your plots (build, upgrade, repair) and sets your Hero's stance.
         </>
       ) : day === 2 ? (
         <>
-          <b>Step 3 · Upgrade & share ({gold}g available):</b> Tap an existing tower to <b>Upgrade</b> it to Level 2, build a <b>Mage Tower</b> against armoured enemies, or donate gold to the <b>Keep</b> in <b>⚒ Plan</b>.
+          <b>Step 3 · Upgrade & share ({gold}g available):</b> Tap a tower with a green <b>⬆</b> (or use <b>⚒ Plan → Your plots</b>) to <b>Upgrade</b> it to Level 2, build a <b>Mage Tower</b> against armoured enemies, or donate gold to the <b>Keep</b> in <b>⚒ Plan</b>.
         </>
       ) : (
         <>

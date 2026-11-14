@@ -152,10 +152,10 @@ export function TutorialContent({
           <div className="option" style={{ flexDirection: 'column', alignItems: 'stretch', cursor: 'default' }}>
             <b>⚒ Step 2: Build Towers, Position Your Hero & Share Gold</b>
             <div>
-              • <b>Tap your glowing plots</b> on the valley map to <b>Build</b> a Level 1 tower, <b>Upgrade</b> (Level 1 → 2 → 3), or <b>Repair</b> battle damage.
+              • <b>Tap your glowing plots</b> (gold <b>＋</b> markers) on the valley map to <b>Build</b> a Level 1 tower. <b>Tap a tower you own</b> to <b>Upgrade</b> it (Level 1 → 2 → 3) or <b>Repair</b> battle damage — a green <b>⬆</b> shows when you can afford an upgrade. <b>⚒ Plan → Your plots</b> lists all of them. Every plot reaches the same length of road. Tap <b>📍</b> to jump back to your plots.
             </div>
             <div>
-              • <b>Open ⚒ Plan</b> to choose where your <b>Hero</b> fights tonight: defend your own sector, guard the Keep, or <b>reinforce a teammate's road</b> that faces a heavy wave or Boss!
+              • <b>Open ⚒ Plan</b> to choose where your <b>Hero</b> fights tonight: defend your own sector, guard the Keep (last line of defence at the end of every road), or <b>reinforce a teammate's road</b> that faces a heavy wave or Boss!
             </div>
             <div>
               • <b>Share Gold:</b> In <b>⚒ Plan</b>, you can send gold (min {ECON.minDonate}g) to a teammate who needs a key tower, or donate to the <b>Keep Fund</b> ({KEEP.fund[0]}g → Lv 2, {KEEP.fund[1]}g → Lv 3 for higher Keep HP and stronger Keep archers).

@@ -66,6 +66,8 @@ export interface SeasonSetup {
 
 export interface PadDef extends Pt {
   id: PadId;
+  /** added to every tower range on this pad so each pad covers the same road length (tools/pad-ranges.mjs) */
+  rangeBonus?: number;
 }
 
 export interface SectorDef {
@@ -175,6 +177,8 @@ export interface BattleHero {
   status: HeroStatus;
   /** position the hero defends */
   post: Pt;
+  /** stance "keep": last line of defence, extended aggro / range */
+  keepGuard?: boolean;
 }
 
 export interface BattleBuilding {
@@ -187,6 +191,8 @@ export interface BattleBuilding {
   y: number;
   /** barracks rally point */
   rally: Pt;
+  /** pad range bonus (see PadDef.rangeBonus) */
+  rangeBonus?: number;
 }
 
 export interface BattleSetup {
@@ -216,6 +222,8 @@ export interface BattleResult {
   bossKilled: boolean;
   stats: Record<PlayerId, PlayerBattleStats>;
   ticks: number;
+  /** enemies still alive when the time ran out (they retreat at sunrise) */
+  escaped?: { role: EnemyRole; hpPct: number }[];
 }
 
 // ---------- Reports ----------

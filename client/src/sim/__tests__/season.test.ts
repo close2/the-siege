@@ -151,7 +151,7 @@ describe('season', () => {
     const { hashes } = botSeason(demoSetup(4), 0.8);
     console.log('golden', hashes[hashes.length - 1]);
     expect(hashes).toHaveLength(30);
-    expect(hashes[29]).toBe('c813e850');
+    expect(hashes[29]).toBe('7fd72587');
   });
 
   it.skipIf(!process.env.BALANCE)('200-season balance distribution across difficulties', () => {
@@ -175,4 +175,46 @@ describe('season', () => {
       }
     }
   }, 120000);
+});
+
+describe('feedback fixes', () => {
+  it('a hero defending the Keep actually fights (knight blocks, ranger shoots)', async () => {
+    const { buildBattleSetup } = await import('../season');
+    for (const [idx, cls] of [[0, 'knight'], [1, 'ranger']] as const) {
+      const setup = demoSetup(4);
+      const s = createInitialState(setup);
+      const me = setup.players[idx].id;
+      expect(setup.players[idx].heroClass).toBe(cls);
+      s.players[me].stance = { mode: 'keep' };
+      const statuses = Object.fromEntries(setup.players.map((p) => [p.id, p.id === me ? 'normal' : 'absent'] as const));
+      const res = new Battle(buildBattleSetup(setup, s, statuses, false)).runToEnd();
+      const st = res.stats[me];
+      expect(st.damage + st.blocks).toBeGreaterThan(0);
+    }
+  });
+
+  it('every pad covers about the same road length at the reference range', async () => {
+    const { VALLEY } = await import('../fixtures');
+    const samples: { x: number; y: number; w: number }[] = [];
+    for (const pts of Object.values(VALLEY.roads))
+      for (let i = 1; i < pts.length; i++) {
+        const a = pts[i - 1];
+        const b = pts[i];
+        const len = Math.sqrt((b.x - a.x) ** 2 + (b.y - a.y) ** 2);
+        const n = Math.max(1, Math.round(len / 2));
+        for (let k = 0; k < n; k++) samples.push({ x: a.x + ((b.x - a.x) * (k + 0.5)) / n, y: a.y + ((b.y - a.y) * (k + 0.5)) / n, w: len / n });
+      }
+    const covs = VALLEY.sectors.flatMap((s) => s.pads).map((p) => {
+      const r = 140 + (p.rangeBonus ?? 0);
+      return samples.reduce((acc, q) => acc + ((q.x - p.x) ** 2 + (q.y - p.y) ** 2 <= r * r ? q.w : 0), 0);
+    });
+    expect(Math.min(...covs)).toBeGreaterThan(0.9 * Math.max(...covs));
+  });
+
+  it('reports enemies that retreat at sunrise', () => {
+    const setup = demoSetup(4);
+    const s = createInitialState(setup);
+    const res = resolveDay(setup, s, undefined);
+    expect(Array.isArray(res.report.battle.escaped)).toBe(true);
+  });
 });

@@ -3,7 +3,7 @@ import { BUILD_COST, BUILDING_HP, ENEMIES, HEROES, TOWERS, BARRACKS, ECON, KEEP 
 import { enemyArtId } from '../content/artSpec';
 import { getTheme } from '../content/themes';
 import { ratio, dayGold, heroLevel } from '../sim/economy';
-import { sectorsPerPlayer } from '../sim/map';
+import { padById, sectorById, sectorsPerPlayer } from '../sim/map';
 import { repairCost, upgradeCost } from '../sim/orders';
 import { seasonRank } from '../sim/season';
 import type { BuildingType, Checkin, DayReport, Dir, EnemyRole, Order, PadId, PlayerId } from '../sim/types';
@@ -24,11 +24,23 @@ function enemyImg(theme: string, role: EnemyRole) {
   return `/assets/${enemyArtId(theme, role)}.webp`;
 }
 
-function towerLine(type: BuildingType, level: number) {
+function towerLine(type: BuildingType, level: number, rangeBonus = 0) {
   if (type === 'barracks') return `${BARRACKS.soldiers[level - 1]} soldiers · ${BARRACKS.hp[level - 1]} HP each`;
   const t = TOWERS[type];
-  return `${t.dmg[level - 1]} dmg · range ${t.range[level - 1]}`;
+  return `${t.dmg[level - 1]} dmg · range ${t.range[level - 1] + rangeBonus}`;
 }
+
+/** effective tower range on a pad (base range + the pad's fairness bonus); null for barracks */
+export function towerRange(view: SeasonView, padId: PadId, type: BuildingType, level: number): number | null {
+  if (type === 'barracks') return null;
+  return TOWERS[type].range[level - 1] + (padById(view.setup.map, padId)?.pad.rangeBonus ?? 0);
+}
+
+const STANCE_HELP = {
+  own: 'Your hero guards the rally point of your first sector and fights enemies walking past.',
+  keep: 'Last line of defence: your hero stands at the Keep and engages anything that reaches the end of any road (wider reach than usual).',
+  neighbor: "Your hero fights in a teammate's sector instead of your own — useful when their road faces a heavy wave or the Boss.",
+} as const;
 
 // ---------------------------------------------------------------------------
 
@@ -132,6 +144,7 @@ export function BuildSheet({ view, padId, onOrders, onClose }: { view: SeasonVie
   const before = view.state.pads[padId];
   const b = pad.building;
   const planned = view.myOrders.filter((o) => 'pad' in o && o.pad === padId);
+  const bonus = padById(view.setup.map, padId)?.pad.rangeBonus ?? 0;
   const add = (o: Order) => {
     onOrders([...view.myOrders, o]);
     onClose();
@@ -149,7 +162,7 @@ export function BuildSheet({ view, padId, onOrders, onClose }: { view: SeasonVie
       </div>
       {b && (
         <div className="muted" style={{ marginBottom: 6 }}>
-          {towerLine(b.type, b.level)} · HP {Math.round(b.hp)}/{BUILDING_HP[b.level - 1]}
+          {towerLine(b.type, b.level, bonus)} · HP {Math.round(b.hp)}/{BUILDING_HP[b.level - 1]}
         </div>
       )}
       <div className="col" style={{ marginTop: 8 }}>
@@ -164,7 +177,7 @@ export function BuildSheet({ view, padId, onOrders, onClose }: { view: SeasonVie
                 ))}
                 <div style={{ fontSize: 13 }}>{BUILDING_INFO[t].text}</div>
                 <div style={{ fontSize: 12 }} className="muted">
-                  {towerLine(t, 1)}
+                  {towerLine(t, 1, bonus)}
                 </div>
               </div>
               <Gold n={BUILD_COST[t]} />
@@ -175,7 +188,7 @@ export function BuildSheet({ view, padId, onOrders, onClose }: { view: SeasonVie
             <img src={`/assets/building_${b.type}_${b.level + 1}.webp`} alt="" />
             <div>
               <b>Upgrade to level {b.level + 1}</b>
-              <div style={{ fontSize: 13 }}>{towerLine(b.type, b.level + 1)}</div>
+              <div style={{ fontSize: 13 }}>{towerLine(b.type, b.level + 1, bonus)}</div>
             </div>
             <Gold n={upgradeCost(b.type, b.level)!} />
           </button>
@@ -203,7 +216,13 @@ export function BuildSheet({ view, padId, onOrders, onClose }: { view: SeasonVie
 
 // ---------------------------------------------------------------------------
 
-function orderLabel(o: Order, view: SeasonView): string {
+function sectorLabel(view: SeasonView, sid: string): string {
+  const sec = sectorById(view.setup.map, sid);
+  const road = ROAD_NAME[sid.split('-')[0] as Dir] ?? sid;
+  return sec ? `${road} · ${sec.ring}` : road;
+}
+
+export function orderLabel(o: Order, view: SeasonView): string {
   const name = (pid: string) => view.setup.players.find((p) => p.id === pid)?.name ?? pid;
   switch (o.kind) {
     case 'build':
@@ -215,11 +234,11 @@ function orderLabel(o: Order, view: SeasonView): string {
     case 'donate':
       return o.to === 'keep' ? `Donate ${o.amount} gold to the Keep` : `Give ${o.amount} gold to ${name(o.to)}`;
     case 'stance':
-      return o.mode === 'own' ? 'Hero defends own sector' : o.mode === 'keep' ? 'Hero defends the Keep' : `Hero reinforces ${o.sector}`;
+      return o.mode === 'own' ? 'Hero defends own sector' : o.mode === 'keep' ? 'Hero defends the Keep' : `Hero reinforces ${sectorLabel(view, o.sector ?? '')}`;
   }
 }
 
-export function PlanSheet({ view, onOrders, onClose }: { view: SeasonView; onOrders: (o: Order[]) => void; onClose: () => void }) {
+export function PlanSheet({ view, onOrders, onOpenPad, onClose }: { view: SeasonView; onOrders: (o: Order[]) => void; onOpenPad: (pad: PadId) => void; onClose: () => void }) {
   const pv = view.preview!;
   const me = view.me;
   const gold = pv.state.players[me].gold;
@@ -234,6 +253,7 @@ export function PlanSheet({ view, onOrders, onClose }: { view: SeasonView; onOrd
   const keep = pv.state.keep;
 
   const setStance = (o: Order) => onOrders([...view.myOrders.filter((x) => x.kind !== 'stance'), o]);
+  const myPads = view.setup.map.sectors.filter((s) => view.state.players[me].sectors.includes(s.id)).flatMap((s) => s.pads);
 
   return (
     <Sheet onClose={onClose}>
@@ -255,6 +275,47 @@ export function PlanSheet({ view, onOrders, onClose }: { view: SeasonView; onOrd
           </div>
         ))}
         {skipped.length > 0 && <div className="error">{skipped.map((s) => `${orderLabel(s.order, view)}: ${s.reason}`).join(' · ')}</div>}
+
+        <h3 style={{ marginTop: 10 }}>Your plots</h3>
+        <div className="muted" style={{ fontSize: 12 }}>
+          Build on free plots, upgrade towers (stronger, longer range, more HP) or repair damage.
+        </div>
+        {myPads.map((p, i) => {
+          const st = pv.state.pads[p.id];
+          const b = st?.building;
+          const up = b ? upgradeCost(b.type, b.level) : null;
+          const rep = b ? repairCost(b.hp, BUILDING_HP[b.level - 1]) : 0;
+          return (
+            <div key={p.id} className="row option" style={{ cursor: 'default', padding: '4px 8px' }}>
+              {b ? <img src={`/assets/building_${b.type}_${b.level}.webp`} alt="" style={{ width: 36, height: 36 }} /> : <span style={{ width: 36, textAlign: 'center', fontSize: 22 }}>＋</span>}
+              <span className="grow" style={{ fontSize: 13 }}>
+                <b>{b ? `${BUILDING_INFO[b.type].name} · Lv ${b.level}` : st?.rubble ? 'Ruins' : 'Free plot'}</b>
+                <span className="muted"> · plot {i + 1}</span>
+                {b && rep > 0 && <span className="muted"> · HP {Math.round(b.hp)}/{BUILDING_HP[b.level - 1]}</span>}
+              </span>
+              {!b && (
+                <button className="btn small gold" onClick={() => onOpenPad(p.id)}>
+                  Build
+                </button>
+              )}
+              {b && up !== null && (
+                <button className="btn small" disabled={gold < up} onClick={() => onOrders([...view.myOrders, { kind: 'upgrade', pad: p.id }])}>
+                  ⬆ <Gold n={up} size={14} />
+                </button>
+              )}
+              {b && rep > 0 && (
+                <button className="btn small" disabled={gold < rep} onClick={() => onOrders([...view.myOrders, { kind: 'repair', pad: p.id }])}>
+                  🔧 <Gold n={rep} size={14} />
+                </button>
+              )}
+              {b && (
+                <button className="btn small" onClick={() => onOpenPad(p.id)} title="Show on map">
+                  📍
+                </button>
+              )}
+            </div>
+          );
+        })}
 
         <h3 style={{ marginTop: 10 }}>Your hero</h3>
         <div className="row">
@@ -278,10 +339,13 @@ export function PlanSheet({ view, onOrders, onClose }: { view: SeasonView; onOrd
             .filter(([, pid]) => pid !== me)
             .map(([sid, pid]) => (
               <option key={sid} value={`n:${sid}`}>
-                Reinforce {nameOf(pid)} ({ROAD_NAME[sid.split('-')[0] as Dir]})
+                Reinforce {nameOf(pid)} ({sectorLabel(view, sid)})
               </option>
             ))}
         </select>
+        <div className="muted" style={{ fontSize: 12 }}>
+          {STANCE_HELP[stance.mode]}
+        </div>
 
         <h3 style={{ marginTop: 10 }}>Share gold</h3>
         <div style={{ fontSize: 13 }}>
@@ -434,7 +498,22 @@ export function DawnReport({ view, report, onClose, onReplay }: { view: SeasonVi
             {Math.round(stats.damage)} · {stats.kills} · {stats.blocks}
           </b>
         </div>
-        {mine.skipped.length > 0 && <div className="error">Not carried out: {mine.skipped.map((s) => s.reason).join(', ')}</div>}
+        {mine.skipped.length > 0 && <div className="error">Not carried out: {mine.skipped.map((s) => `${orderLabel(s.order, view)} (${s.reason})`).join(', ')}</div>}
+        {(report.battle.escaped?.length ?? 0) > 0 && (
+          <div className="muted" style={{ fontSize: 13 }}>
+            ☀ At sunrise these enemies retreated (no harm done, but no kill either):{' '}
+            {Object.entries(
+              report.battle.escaped!.reduce<Record<string, { n: number; hp: number[] }>>((acc, e) => {
+                const k = theme.roles[e.role].name;
+                (acc[k] ??= { n: 0, hp: [] }).n++;
+                acc[k].hp.push(e.hpPct);
+                return acc;
+              }, {}),
+            )
+              .map(([k, v]) => (v.n === 1 ? `${k} (${v.hp[0]}% HP)` : `${v.n}× ${k}`))
+              .join(', ')}
+          </div>
+        )}
         <h3 style={{ marginTop: 8 }}>Heroes of the night</h3>
         <div>🏹 Top damage: <b>{name(report.mvp.damage)}</b></div>
         <div>🛡 The Wall: <b>{name(report.mvp.wall)}</b></div>

@@ -214,8 +214,27 @@ label.field {
   max-width: 560px;
   max-height: 86vh;
   overflow-y: auto;
+  /* never scroll/drag sideways on phones: content must wrap instead */
+  overflow-x: hidden;
+  touch-action: pan-y;
+  overflow-wrap: anywhere;
   margin-bottom: var(--safe-bottom);
   animation: slideup 0.22s ease-out;
+}
+/* let flex children (buttons, labels) shrink and wrap instead of pushing the sheet wider */
+.sheet .row > *,
+.sheet .option > * {
+  min-width: 0;
+}
+.sheet .row > img,
+.sheet .option > img,
+.sheet .cost {
+  flex-shrink: 0;
+}
+.sheet .btn {
+  white-space: normal;
+  text-align: center;
+  line-height: 1.15;
 }
 .sheet > .row:first-of-type,
 .sheet > h3:first-of-type {
@@ -434,4 +453,14 @@ label.field {
   white-space: nowrap;
   pointer-events: none;
   animation: pop 0.6s ease-out;
+}
+.recenter {
+  position: absolute;
+  right: 10px;
+  bottom: calc(76px + var(--safe-bottom));
+  z-index: 13;
+  min-width: 44px;
+  min-height: 44px;
+  font-size: 20px;
+  padding: 0;
 }
