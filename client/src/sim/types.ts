@@ -83,6 +83,12 @@ export interface MapDef {
   id: string;
   width: number;
   height: number;
+  /** symmetric painted bleed (world px) outside [0..width] × [0..height]; defaults to 0 */
+  border?: number;
+  /** camera overscroll allowance (world px) past [0..width] × [0..height]; defaults to DEFAULT_CAMERA_OVERSCROLL */
+  overscroll?: number;
+  /** background asset id override; defaults to `map_${id}` */
+  art?: string;
   keep: Pt;
   /** polyline from map edge to keep */
   roads: Record<Dir, Pt[]>;

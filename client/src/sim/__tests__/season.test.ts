@@ -227,4 +227,33 @@ describe('feedback fixes', () => {
     const res = resolveDay(setup, s, undefined);
     expect(Array.isArray(res.report.battle.escaped)).toBe(true);
   });
+
+  it('keeps map visual border wider than max camera overscroll + shake, matches processed art, and leaves battle determinism untouched', async () => {
+    const fs = await import('fs');
+    const path = await import('path');
+    const { fileURLToPath } = await import('url');
+    const { VALLEY } = await import('../fixtures');
+    const { MAX_CAMERA_SHAKE_OFFSET, mapArtId, mapOverscroll, mapVisualBounds } = await import('../map');
+
+    const bounds = mapVisualBounds(VALLEY);
+    const maxExcursion = mapOverscroll(VALLEY) + MAX_CAMERA_SHAKE_OFFSET;
+    expect(bounds.border).toBeGreaterThanOrEqual(maxExcursion);
+
+    const here = path.dirname(fileURLToPath(import.meta.url));
+    const genPath = path.resolve(here, '../../../public/assets/assets.gen.json');
+    const gen = JSON.parse(fs.readFileSync(genPath, 'utf8')) as Record<string, { w: number; h: number; v?: string }>;
+    const artId = mapArtId(VALLEY);
+    expect(gen[artId]).toBeDefined();
+    expect(gen[artId].w).toBe(bounds.width);
+    expect(gen[artId].h).toBe(bounds.height);
+    expect(gen[artId].v).toMatch(/^[0-9a-f]{8}$/);
+
+    // Changing visual `border` must never alter deterministic season/battle simulation
+    const setupWithBorder = demoSetup(3);
+    const setupWithoutBorder = { ...setupWithBorder, map: { ...setupWithBorder.map, border: 0 } };
+    const r1 = resolveDay(setupWithBorder, createInitialState(setupWithBorder), undefined);
+    const r2 = resolveDay(setupWithoutBorder, createInitialState(setupWithoutBorder), undefined);
+    expect(r1.next).toEqual(r2.next);
+    expect(r1.report).toEqual(r2.report);
+  });
 });

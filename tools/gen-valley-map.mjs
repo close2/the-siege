@@ -10,6 +10,9 @@ import { fileURLToPath } from 'url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const out = path.join(here, '../client/src/content/maps/valley.json');
 
+const WIDTH = 2048;
+const HEIGHT = 2048;
+const BORDER = 512;
 const KEEP = { x: 1040, y: 990 };
 
 const ROADS = {
@@ -81,5 +84,5 @@ for (const [d, pts] of Object.entries(ROADS)) {
 }
 const order = ['N-out', 'E-out', 'S-out', 'W-out', 'N-in', 'E-in', 'S-in', 'W-in'];
 sectors.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
-fs.writeFileSync(out, JSON.stringify({ id: 'valley', width: 2048, height: 2048, keep: KEEP, roads, sectors }, null, 2));
+fs.writeFileSync(out, JSON.stringify({ id: 'valley', width: WIDTH, height: HEIGHT, border: BORDER, keep: KEEP, roads, sectors }, null, 2));
 console.log('wrote', out);

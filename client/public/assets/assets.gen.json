@@ -3,366 +3,427 @@
   "w": 512,
   "h": 512,
   "anchorX": 0.5,
-  "anchorY": 0.5
+  "anchorY": 0.5,
+  "v": "1efb9e80"
  },
  "boss_sugar_wraith": {
   "w": 381,
   "h": 480,
   "anchorX": 0.5,
-  "anchorY": 0.97
+  "anchorY": 0.97,
+  "v": "41027701"
  },
  "boss_sugar_wraith_attack": {
   "w": 473,
   "h": 480,
   "anchorX": 0.5,
-  "anchorY": 0.97
+  "anchorY": 0.97,
+  "v": "f1013d58"
  },
  "building_archer_1": {
   "w": 203,
   "h": 400,
   "anchorX": 0.5,
-  "anchorY": 0.89
+  "anchorY": 0.89,
+  "v": "0b1c6d05"
  },
  "building_archer_2": {
   "w": 285,
   "h": 450,
   "anchorX": 0.5,
-  "anchorY": 0.862
+  "anchorY": 0.862,
+  "v": "8b4f632c"
  },
  "building_archer_3": {
   "w": 353,
   "h": 520,
   "anchorX": 0.5,
-  "anchorY": 0.852
+  "anchorY": 0.852,
+  "v": "30068469"
  },
  "building_barracks_1": {
   "w": 316,
   "h": 320,
   "anchorX": 0.5,
-  "anchorY": 0.785
+  "anchorY": 0.785,
+  "v": "d1720bb5"
  },
  "building_barracks_2": {
   "w": 384,
   "h": 360,
   "anchorX": 0.5,
-  "anchorY": 0.768
+  "anchorY": 0.768,
+  "v": "95d70523"
  },
  "building_barracks_3": {
   "w": 367,
   "h": 400,
   "anchorX": 0.5,
-  "anchorY": 0.801
+  "anchorY": 0.801,
+  "v": "04392624"
  },
  "building_catapult_1": {
   "w": 305,
   "h": 300,
   "anchorX": 0.5,
-  "anchorY": 0.779
+  "anchorY": 0.779,
+  "v": "5755269a"
  },
  "building_catapult_2": {
   "w": 344,
   "h": 340,
   "anchorX": 0.5,
-  "anchorY": 0.78
+  "anchorY": 0.78,
+  "v": "98618736"
  },
  "building_catapult_3": {
   "w": 396,
   "h": 400,
   "anchorX": 0.5,
-  "anchorY": 0.785
+  "anchorY": 0.785,
+  "v": "74bfcf9d"
  },
  "building_mage_1": {
   "w": 184,
   "h": 400,
   "anchorX": 0.5,
-  "anchorY": 0.9
+  "anchorY": 0.9,
+  "v": "c0b811e5"
  },
  "building_mage_2": {
   "w": 210,
   "h": 450,
   "anchorX": 0.5,
-  "anchorY": 0.899
+  "anchorY": 0.899,
+  "v": "dfcc214e"
  },
  "building_mage_3": {
   "w": 271,
   "h": 520,
   "anchorX": 0.5,
-  "anchorY": 0.887
+  "anchorY": 0.887,
+  "v": "22e57fdd"
  },
  "enemy_sugar_brute": {
   "w": 199,
   "h": 220,
   "anchorX": 0.5,
-  "anchorY": 0.97
+  "anchorY": 0.97,
+  "v": "bdfba86b"
  },
  "enemy_sugar_flyer": {
   "w": 222,
   "h": 140,
   "anchorX": 0.5,
-  "anchorY": 0.5
+  "anchorY": 0.5,
+  "v": "7156c41f"
  },
  "enemy_sugar_grunt": {
   "w": 116,
   "h": 130,
   "anchorX": 0.5,
-  "anchorY": 0.97
+  "anchorY": 0.97,
+  "v": "85992da0"
  },
  "enemy_sugar_runner": {
   "w": 136,
   "h": 120,
   "anchorX": 0.5,
-  "anchorY": 0.97
+  "anchorY": 0.97,
+  "v": "1870d746"
  },
  "enemy_sugar_siege": {
   "w": 234,
   "h": 260,
   "anchorX": 0.5,
-  "anchorY": 0.97
+  "anchorY": 0.97,
+  "v": "0e5c978f"
  },
  "hero_knight": {
   "w": 186,
   "h": 200,
   "anchorX": 0.5,
-  "anchorY": 0.97
+  "anchorY": 0.97,
+  "v": "ac6f49f0"
  },
  "hero_knight_attack": {
   "w": 172,
   "h": 200,
   "anchorX": 0.5,
-  "anchorY": 0.97
+  "anchorY": 0.97,
+  "v": "92bd2fb3"
  },
  "hero_priest": {
   "w": 175,
   "h": 200,
   "anchorX": 0.5,
-  "anchorY": 0.97
+  "anchorY": 0.97,
+  "v": "23dd6f34"
  },
  "hero_priest_attack": {
   "w": 177,
   "h": 200,
   "anchorX": 0.5,
-  "anchorY": 0.97
+  "anchorY": 0.97,
+  "v": "411bb82c"
  },
  "hero_ranger": {
   "w": 184,
   "h": 200,
   "anchorX": 0.5,
-  "anchorY": 0.97
+  "anchorY": 0.97,
+  "v": "6be0e436"
  },
  "hero_ranger_attack": {
   "w": 179,
   "h": 200,
   "anchorX": 0.5,
-  "anchorY": 0.97
+  "anchorY": 0.97,
+  "v": "308ced1d"
  },
  "icon_armor": {
   "w": 108,
   "h": 128,
   "anchorX": 0.5,
-  "anchorY": 0.5
+  "anchorY": 0.5,
+  "v": "93497585"
  },
  "icon_check": {
   "w": 130,
   "h": 128,
   "anchorX": 0.5,
-  "anchorY": 0.5
+  "anchorY": 0.5,
+  "v": "3daa04d0"
  },
  "icon_flying": {
   "w": 126,
   "h": 128,
   "anchorX": 0.5,
-  "anchorY": 0.5
+  "anchorY": 0.5,
+  "v": "3cc3b496"
  },
  "icon_gold": {
   "w": 132,
   "h": 128,
   "anchorX": 0.5,
-  "anchorY": 0.5
+  "anchorY": 0.5,
+  "v": "75ae2d30"
  },
  "icon_heart": {
   "w": 129,
   "h": 128,
   "anchorX": 0.5,
-  "anchorY": 0.5
+  "anchorY": 0.5,
+  "v": "9b6d002d"
  },
  "icon_magic": {
   "w": 127,
   "h": 128,
   "anchorX": 0.5,
-  "anchorY": 0.5
+  "anchorY": 0.5,
+  "v": "a83b285f"
  },
  "icon_physical": {
   "w": 126,
   "h": 128,
   "anchorX": 0.5,
-  "anchorY": 0.5
+  "anchorY": 0.5,
+  "v": "839be1bc"
  },
  "icon_rally": {
   "w": 132,
   "h": 128,
   "anchorX": 0.5,
-  "anchorY": 0.5
+  "anchorY": 0.5,
+  "v": "ada0524c"
  },
  "icon_repair": {
   "w": 132,
   "h": 128,
   "anchorX": 0.5,
-  "anchorY": 0.5
+  "anchorY": 0.5,
+  "v": "9d2bce92"
  },
  "icon_siege": {
   "w": 142,
   "h": 128,
   "anchorX": 0.5,
-  "anchorY": 0.5
+  "anchorY": 0.5,
+  "v": "90fd2516"
  },
  "icon_star": {
   "w": 131,
   "h": 128,
   "anchorX": 0.5,
-  "anchorY": 0.5
+  "anchorY": 0.5,
+  "v": "c435552a"
  },
  "icon_star_empty": {
   "w": 131,
   "h": 128,
   "anchorX": 0.5,
-  "anchorY": 0.5
+  "anchorY": 0.5,
+  "v": "38232b1d"
  },
  "icon_streak": {
   "w": 119,
   "h": 128,
   "anchorX": 0.5,
-  "anchorY": 0.5
+  "anchorY": 0.5,
+  "v": "7176b557"
  },
  "keep_1": {
   "w": 566,
   "h": 720,
   "anchorX": 0.5,
-  "anchorY": 0.829
+  "anchorY": 0.829,
+  "v": "56513ecd"
  },
  "keep_2": {
   "w": 749,
   "h": 810,
   "anchorX": 0.5,
-  "anchorY": 0.799
+  "anchorY": 0.799,
+  "v": "e6d3c3f1"
  },
  "keep_3": {
   "w": 698,
   "h": 900,
   "anchorX": 0.5,
-  "anchorY": 0.831
+  "anchorY": 0.831,
+  "v": "c46512a4"
  },
  "keyart_defeat": {
   "w": 768,
   "h": 768,
   "anchorX": 0.5,
-  "anchorY": 0.5
+  "anchorY": 0.5,
+  "v": "45432ba7"
  },
  "keyart_title": {
   "w": 1376,
   "h": 768,
   "anchorX": 0.5,
-  "anchorY": 0.5
+  "anchorY": 0.5,
+  "v": "e2d48152"
  },
  "keyart_victory": {
   "w": 768,
   "h": 768,
   "anchorX": 0.5,
-  "anchorY": 0.5
+  "anchorY": 0.5,
+  "v": "cc5e00c2"
  },
  "map_valley": {
-  "w": 2048,
-  "h": 2048,
+  "w": 3072,
+  "h": 3072,
   "anchorX": 0.5,
-  "anchorY": 0.5
+  "anchorY": 0.5,
+  "v": "52d19e7d"
  },
  "pad_empty": {
   "w": 250,
   "h": 200,
   "anchorX": 0.5,
-  "anchorY": 0.5
+  "anchorY": 0.5,
+  "v": "706176ab"
  },
  "portrait_boss_sugar": {
   "w": 281,
   "h": 320,
   "anchorX": 0.5,
-  "anchorY": 0.5
+  "anchorY": 0.5,
+  "v": "48a75e37"
  },
  "portrait_knight": {
   "w": 289,
   "h": 320,
   "anchorX": 0.5,
-  "anchorY": 0.5
+  "anchorY": 0.5,
+  "v": "670ec9d5"
  },
  "portrait_priest": {
   "w": 285,
   "h": 320,
   "anchorX": 0.5,
-  "anchorY": 0.5
+  "anchorY": 0.5,
+  "v": "f957e0f8"
  },
  "portrait_ranger": {
   "w": 307,
   "h": 320,
   "anchorX": 0.5,
-  "anchorY": 0.5
+  "anchorY": 0.5,
+  "v": "34978702"
  },
  "proj_arrow": {
   "w": 69,
   "h": 24,
   "anchorX": 0.5,
-  "anchorY": 0.5
+  "anchorY": 0.5,
+  "v": "6cbd9a96"
  },
  "proj_rock": {
   "w": 49,
   "h": 48,
   "anchorX": 0.5,
-  "anchorY": 0.5
+  "anchorY": 0.5,
+  "v": "1dd2013c"
  },
  "rubble": {
   "w": 239,
   "h": 240,
   "anchorX": 0.5,
-  "anchorY": 0.784
+  "anchorY": 0.784,
+  "v": "4ec7aae3"
  },
  "soldier_footman": {
   "w": 117,
   "h": 150,
   "anchorX": 0.5,
-  "anchorY": 0.97
+  "anchorY": 0.97,
+  "v": "7df91683"
  },
  "soldier_footman_attack": {
   "w": 170,
   "h": 150,
   "anchorX": 0.5,
-  "anchorY": 0.97
+  "anchorY": 0.97,
+  "v": "bc7a3b0a"
  },
  "ui_banner": {
   "w": 191,
   "h": 240,
   "anchorX": 0.5,
-  "anchorY": 0.97
+  "anchorY": 0.97,
+  "v": "71178e67"
  },
  "ui_button": {
   "w": 227,
   "h": 160,
   "anchorX": 0.5,
-  "anchorY": 0.5
+  "anchorY": 0.5,
+  "v": "408dbdba"
  },
  "ui_button_gold": {
   "w": 227,
   "h": 160,
   "anchorX": 0.5,
-  "anchorY": 0.5
+  "anchorY": 0.5,
+  "v": "bdf318d6"
  },
  "ui_panel": {
   "w": 523,
   "h": 512,
   "anchorX": 0.5,
-  "anchorY": 0.5
+  "anchorY": 0.5,
+  "v": "d266ee66"
  },
  "ui_ribbon": {
   "w": 408,
   "h": 160,
   "anchorX": 0.5,
-  "anchorY": 0.5
+  "anchorY": 0.5,
+  "v": "d47edd7f"
  }
 }

@@ -2,6 +2,7 @@
   "id": "valley",
   "width": 2048,
   "height": 2048,
+  "border": 512,
   "keep": {
     "x": 1040,
     "y": 990

@@ -1,11 +1,12 @@
 // /dev/gallery — every manifest id on a checkerboard and on a dark background, with missing ones highlighted in red (tasks.md T2.3).
 import { useEffect, useState } from 'react';
 import { ART, MANIFEST_IDS } from '../content/artSpec';
+import { assetUrl, type GenEntry } from '../render/assets';
 
 const CHECKERBOARD = 'repeating-conic-gradient(#d8d2c4 0% 25%, #ebe6da 0% 50%) 50% / 16px 16px';
 
 export function Gallery() {
-  const [gen, setGen] = useState<Record<string, { w: number; h: number; anchorX: number; anchorY: number }> | null>(null);
+  const [gen, setGen] = useState<Record<string, GenEntry> | null>(null);
   useEffect(() => {
     fetch('/assets/assets.gen.json')
       .then((r) => r.json())
@@ -45,7 +46,7 @@ export function Gallery() {
                       {spec?.label || '?'}
                     </div>
                   ) : (
-                    <img src={`/assets/${id}.webp`} style={{ maxWidth: '95%', maxHeight: '95%' }} alt="" />
+                    <img src={assetUrl(id, g?.v)} style={{ maxWidth: '95%', maxHeight: '95%' }} alt="" />
                   )}
                 </div>
               ))}

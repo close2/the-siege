@@ -1,6 +1,8 @@
 // /dev/map-editor — drag keep, road points, pads, rally and heroSpawn points over map_valley; export JSON (tasks.md T2.5).
 import { useCallback, useEffect, useRef, useState } from 'react';
 import valley from '../content/maps/valley.json';
+import { assetUrl, type GenEntry } from '../render/assets';
+import { mapArtId, mapVisualBounds } from '../sim/map';
 import type { Dir, MapDef, Pt } from '../sim/types';
 import { DIRS } from '../sim/types';
 
@@ -16,7 +18,15 @@ export function MapEditor() {
   const [drag, setDrag] = useState<Sel | null>(null);
   const [selected, setSelected] = useState<Sel | null>(null);
   const [zoom, setZoom] = useState(0.45);
+  const [gen, setGen] = useState<Record<string, GenEntry>>({});
   const svg = useRef<SVGSVGElement>(null);
+
+  useEffect(() => {
+    fetch('/assets/assets.gen.json')
+      .then((r) => (r.ok ? r.json() : {}))
+      .then(setGen)
+      .catch(() => {});
+  }, []);
 
   const toWorld = (e: React.PointerEvent): Pt => {
     const r = svg.current!.getBoundingClientRect();
@@ -98,19 +108,41 @@ export function MapEditor() {
   };
 
   const json = JSON.stringify(map, null, 2);
+  const artId = mapArtId(map);
+  const bounds = mapVisualBounds(map);
   return (
     <div style={{ display: 'flex', height: '100vh' }}>
       <div style={{ flex: 1, overflow: 'auto', background: '#111' }}>
-        <div style={{ position: 'relative', width: map.width * zoom, height: map.height * zoom }}>
-          <img src="/assets/map_valley.webp" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} alt="" draggable={false} />
+        <div style={{ position: 'relative', width: bounds.width * zoom, height: bounds.height * zoom }}>
+          <img src={assetUrl(artId, gen[artId]?.v)} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} alt="" draggable={false} />
           <svg
             ref={svg}
             viewBox={`0 0 ${map.width} ${map.height}`}
-            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
+            style={{
+              position: 'absolute',
+              left: bounds.border * zoom,
+              top: bounds.border * zoom,
+              width: map.width * zoom,
+              height: map.height * zoom,
+              overflow: 'visible',
+            }}
             onPointerMove={move}
             onPointerUp={() => setDrag(null)}
             onPointerDown={() => setSelected(null)}
           >
+            {bounds.border > 0 && (
+              <rect
+                x={0}
+                y={0}
+                width={map.width}
+                height={map.height}
+                fill="none"
+                stroke="rgba(255,255,255,0.45)"
+                strokeWidth={4}
+                strokeDasharray="16 12"
+                pointerEvents="none"
+              />
+            )}
             {DIRS.map((d) => (
               <polyline key={d} points={map.roads[d].map((p) => `${p.x},${p.y}`).join(' ')} fill="none" stroke="red" strokeWidth={6} opacity={0.7} />
             ))}

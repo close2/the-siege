@@ -8,6 +8,7 @@ Requires Python 3 with Pillow and numpy.
 
 Usage: python3 tools/process_art.py [id ...]
 """
+import hashlib
 import json
 import os
 import sys
@@ -18,6 +19,7 @@ from PIL import Image
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 RAW = os.path.join(ROOT, 'art', 'raw')
 OUT = os.path.join(ROOT, 'client', 'public', 'assets')
+MAPS = os.path.join(ROOT, 'client', 'src', 'content', 'maps')
 MANIFEST = os.path.join(ROOT, 'art', 'manifest.json')
 
 T0 = 60.0   # distance to key: fully transparent below
@@ -118,6 +120,23 @@ def anchor_for(kind, img):
     return 0.5, 0.97
 
 
+def file_version(path):
+    with open(path, 'rb') as f:
+        return hashlib.sha256(f.read()).hexdigest()[:8]
+
+
+def resolve_background_dims(asset_id, spec):
+    if 'outH' in spec:
+        return spec['outH'], None
+    map_id = spec.get('map')
+    if not map_id:
+        raise ValueError(f'{asset_id}: background spec must define "map" or "outH"')
+    map_path = os.path.join(MAPS, f'{map_id}.json')
+    m = json.load(open(map_path))
+    border = m.get('border', 0)
+    return m['height'] + border * 2, m['width'] + border * 2
+
+
 def main():
     manifest = {k: v for k, v in json.load(open(MANIFEST)).items() if not k.startswith('_')}
     only = set(sys.argv[1:])
@@ -127,6 +146,9 @@ def main():
     missing = []
     for asset_id, spec in manifest.items():
         if only and asset_id not in only:
+            existing_dst = os.path.join(OUT, f'{asset_id}.webp')
+            if asset_id in gen and 'v' not in gen[asset_id] and os.path.exists(existing_dst):
+                gen[asset_id]['v'] = file_version(existing_dst)
             continue
         src = find_raw(asset_id)
         if not src:
@@ -136,7 +158,10 @@ def main():
         img = Image.open(src)
         kind = spec['kind']
         if kind in ('background', 'keyart'):
-            img = resize_h(img.convert('RGB'), spec['outH'])
+            out_h, expected_w = resolve_background_dims(asset_id, spec) if kind == 'background' else (spec['outH'], None)
+            img = resize_h(img.convert('RGB'), out_h)
+            if expected_w is not None and abs(img.width - expected_w) > 1:
+                raise ValueError(f'{asset_id}: expected aspect width {expected_w} at height {out_h}, got {img.width}x{img.height}')
             ax, ay = 0.5, 0.5
             quality = 85
         else:
@@ -156,8 +181,9 @@ def main():
             quality = 90
         dst = os.path.join(OUT, f'{asset_id}.webp')
         img.save(dst, 'WEBP', quality=quality, method=6)
-        gen[asset_id] = {'w': img.width, 'h': img.height, 'anchorX': ax, 'anchorY': ay}
-        print(f'{asset_id:28s} {img.width}x{img.height}  anchor {ax},{ay}')
+        ver = file_version(dst)
+        gen[asset_id] = {'w': img.width, 'h': img.height, 'anchorX': ax, 'anchorY': ay, 'v': ver}
+        print(f'{asset_id:28s} {img.width}x{img.height}  anchor {ax},{ay}  v {ver}')
     json.dump(dict(sorted(gen.items())), open(gen_path, 'w'), indent=1)
     icon_src = find_raw('app_icon')
     if icon_src and (not only or 'app_icon' in only):

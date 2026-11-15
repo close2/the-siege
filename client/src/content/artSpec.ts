@@ -1,5 +1,8 @@
-// Art ids → display size in world px (map is 2048×2048) and placeholder look.
+// Art ids → display size in world px and placeholder look.
 // Heights are the on-map height of the visible object. See docs/art-list.md.
+import { mapVisualBounds } from '../sim/map';
+import type { MapDef } from '../sim/types';
+import valley from './maps/valley.json';
 
 export type ArtKind = 'unit' | 'building' | 'keep' | 'pad' | 'proj' | 'ui' | 'icon' | 'portrait' | 'background';
 
@@ -15,7 +18,7 @@ const u = (h: number, color: number, label: string): ArtSpec => ({ kind: 'unit',
 const b = (h: number, color: number, label: string): ArtSpec => ({ kind: 'building', h, color, label });
 
 export const ART: Record<string, ArtSpec> = {
-  map_valley: { kind: 'background', h: 2048, color: 0x5d8a3a, label: 'map' },
+  map_valley: { kind: 'background', h: mapVisualBounds(valley as unknown as MapDef).height, color: 0x5d8a3a, label: 'map' },
   keep_1: { kind: 'keep', h: 240, color: 0x8a8f9c, label: 'K1' },
   keep_2: { kind: 'keep', h: 270, color: 0x9aa0ae, label: 'K2' },
   keep_3: { kind: 'keep', h: 300, color: 0xb0b6c4, label: 'K3' },

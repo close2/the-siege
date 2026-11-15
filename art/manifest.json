@@ -1,6 +1,6 @@
 {
-  "_doc": "id -> processing spec. kind: sprite (keyed, trimmed), background (copied), keyart (copied, resized), icon/portrait/ui (keyed, trimmed). outH = output texture height in px (sprites: ~3x the on-map display height). anchor: bottom|center|base (buildings: auto-estimated base ellipse).",
-  "map_valley": { "kind": "background", "outH": 2048 },
+  "_doc": "id -> processing spec. kind: sprite (keyed, trimmed), background (copied; set map to derive size from content/maps/<map>.json, or outH explicitly), keyart (copied, resized), icon/portrait/ui (keyed, trimmed). outH = output texture height in px (sprites: ~3x the on-map display height). anchor: bottom|center|base (buildings: auto-estimated base ellipse).",
+  "map_valley": { "kind": "background", "map": "valley" },
   "keyart_title": { "kind": "keyart", "outH": 768 },
   "keyart_victory": { "kind": "keyart", "outH": 768 },
   "keyart_defeat": { "kind": "keyart", "outH": 768 },

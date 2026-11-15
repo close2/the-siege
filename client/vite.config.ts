@@ -28,10 +28,10 @@ export default defineConfig({
         navigateFallbackDenylist: [/^\/api\//],
         runtimeCaching: [
           {
-            urlPattern: /\/assets\/.*\.webp$/,
+            urlPattern: /\/assets\/.*\.webp(?:\?.*)?$/,
             handler: 'CacheFirst',
             options: {
-              cacheName: 'siege-art-v1',
+              cacheName: 'siege-art-v2',
               expiration: { maxEntries: 120, maxAgeSeconds: 365 * 24 * 3600 },
             },
           },

@@ -3,6 +3,39 @@ import type { Dir, MapDef, PadDef, PadId, PlayerId, Pt, SectorDef, SectorId, Set
 
 export const SECTOR_ORDER: readonly SectorId[] = ['N-out', 'E-out', 'S-out', 'W-out', 'N-in', 'E-in', 'S-in', 'W-in'];
 
+/** default world-px distance the camera may be pulled past the playable [0..width] × [0..height] area so edge pads clear the HUD */
+export const DEFAULT_CAMERA_OVERSCROLL = 320;
+
+/** maximum world-px offset produced on either axis by camera shake */
+export const MAX_CAMERA_SHAKE_OFFSET = 16;
+
+export interface MapVisualBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  border: number;
+}
+
+export function mapArtId(map: Pick<MapDef, 'id' | 'art'>): string {
+  return map.art ?? `map_${map.id}`;
+}
+
+export function mapOverscroll(map: Pick<MapDef, 'overscroll'>): number {
+  return map.overscroll ?? DEFAULT_CAMERA_OVERSCROLL;
+}
+
+export function mapVisualBounds(map: Pick<MapDef, 'width' | 'height' | 'border'>): MapVisualBounds {
+  const border = map.border ?? 0;
+  return {
+    x: -border,
+    y: -border,
+    width: map.width + border * 2,
+    height: map.height + border * 2,
+    border,
+  };
+}
+
 export function sectorsPerPlayer(playerCount: number): number {
   return playerCount <= 3 ? 2 : 1;
 }

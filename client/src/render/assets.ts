@@ -11,11 +11,19 @@ export interface ArtTexture {
   placeholder: boolean;
 }
 
-interface GenEntry {
+export interface GenEntry {
   w: number;
   h: number;
   anchorX: number;
   anchorY: number;
+  v?: string;
+}
+
+const MAX_PLACEHOLDER_TEX_H = 2048;
+
+/** Versioned URL of a processed `.webp` asset so Service Worker `CacheFirst` invalidates when art changes. */
+export function assetUrl(id: string, version?: string): string {
+  return version ? `/assets/${id}.webp?v=${version}` : `/assets/${id}.webp`;
 }
 
 export class AssetStore {
@@ -40,10 +48,10 @@ export class AssetStore {
     await Promise.all(
       ids.map(async (id) => {
         try {
-          const tex = (await Assets.load(`/assets/${id}.webp`)) as Texture;
+          const g = this.gen[id];
+          const tex = (await Assets.load(assetUrl(id, g?.v))) as Texture;
           const spec = ART[id];
           const scale = spec ? spec.h / tex.height : 1;
-          const g = this.gen[id];
           this.cache.set(id, { texture: tex, scale, anchorX: g?.anchorX ?? 0.5, anchorY: g?.anchorY ?? 0.95, placeholder: false });
         } catch {
           this.available.delete(id);
@@ -53,9 +61,13 @@ export class AssetStore {
     this.softDot = this.makeSoftDot();
   }
 
-  /** URL of a processed asset for use in DOM/CSS (null if not generated yet). */
-  static url(id: string): string {
-    return `/assets/${id}.webp`;
+  /** URL of a processed asset for use in DOM/CSS. */
+  static url(id: string, version?: string): string {
+    return assetUrl(id, version);
+  }
+
+  url(id: string): string {
+    return assetUrl(id, this.gen[id]?.v);
   }
 
   has(id: string): boolean {
@@ -86,7 +98,7 @@ export class AssetStore {
 
   private makePlaceholder(id: string, spec: ArtSpec | undefined): ArtTexture {
     const s: ArtSpec = spec ?? { kind: 'unit', h: 40, color: 0xff00ff, label: id };
-    const H = s.h * 2; // render at 2x for crispness
+    const H = Math.min(MAX_PLACEHOLDER_TEX_H, s.h * 2); // render at 2x for crispness within safe GPU limits
     const c = new Container();
     const g = new Graphics();
     c.addChild(g);
@@ -130,6 +142,6 @@ export class AssetStore {
     const texture = this.renderer.generateTexture({ target: c, frame: new Rectangle(0, 0, w, H), resolution: 1 });
     c.destroy({ children: true });
     const anchorY = s.kind === 'pad' || s.kind === 'proj' ? 0.5 : s.kind === 'unit' ? 0.95 : 0.9;
-    return { texture, scale: 0.5, anchorX: 0.5, anchorY, placeholder: true };
+    return { texture, scale: s.h / H, anchorX: 0.5, anchorY, placeholder: true };
   }
 }

@@ -5,7 +5,15 @@ import { enemyArtId } from '../content/artSpec';
 import { BUILDING_HP, ECON, TICK_RATE } from '../content/stats';
 import i18n from '../i18n';
 import { Battle, type BattleEvent, type EntityId, type ProjectileKind } from '../sim/battle';
-import { makePath, pointAt } from '../sim/map';
+import {
+  DEFAULT_CAMERA_OVERSCROLL,
+  MAX_CAMERA_SHAKE_OFFSET,
+  makePath,
+  mapArtId,
+  mapOverscroll,
+  mapVisualBounds,
+  pointAt,
+} from '../sim/map';
 import type { BattleSetup, Dir, Intent, KeepState, MapDef, PadId, PadState, PlayerId } from '../sim/types';
 import { DIRS } from '../sim/types';
 import { sound } from './Sound';
@@ -38,8 +46,11 @@ export interface ValleyOptions {
   upgradable?: ReadonlySet<PadId>;
 }
 
-/** how far (world px) the camera may be pulled beyond the map edge, so edge pads can be moved out from under the HUD */
-const OVERSCROLL = 320;
+/** fallback playable world dimension before the first `showValley` call supplies a `MapDef` */
+const INITIAL_FALLBACK_WORLD_SIZE = 2048;
+/** target world width fitted across narrow viewports on initial camera framing (capped at scale 1 on wide screens) */
+const INITIAL_TARGET_WORLD_WIDTH = 900;
+const MAX_ZOOM_SCALE = 2.5;
 
 export class GameView {
   readonly app = new Application();
@@ -62,6 +73,7 @@ export class GameView {
   autoCamera = false;
   cameraFocus: { x: number; y: number }[] = [];
   private map: MapDef | null = null;
+  private configuredViewportKey: string | null = null;
   private buildingViews = new Map<PadId, BuildingView>();
   private keepSprite: Sprite | null = null;
   private lastKeepLevel = 0;
@@ -83,13 +95,25 @@ export class GameView {
     el.appendChild(this.app.canvas);
     this.assets = new AssetStore(this.app.renderer as never);
     await this.assets.init();
-    this.viewport = new Viewport({ screenWidth: el.clientWidth, screenHeight: el.clientHeight, worldWidth: 2048, worldHeight: 2048, events: this.app.renderer.events });
+    this.viewport = new Viewport({
+      screenWidth: el.clientWidth,
+      screenHeight: el.clientHeight,
+      worldWidth: INITIAL_FALLBACK_WORLD_SIZE,
+      worldHeight: INITIAL_FALLBACK_WORLD_SIZE,
+      events: this.app.renderer.events,
+    });
     this.viewport
       .drag()
       .pinch()
       .wheel({ smooth: 4 })
       .decelerate({ friction: 0.92 })
-      .clamp({ left: -OVERSCROLL, top: -OVERSCROLL, right: 2048 + OVERSCROLL, bottom: 2048 + OVERSCROLL, underflow: 'center' });
+      .clamp({
+        left: -DEFAULT_CAMERA_OVERSCROLL,
+        top: -DEFAULT_CAMERA_OVERSCROLL,
+        right: INITIAL_FALLBACK_WORLD_SIZE + DEFAULT_CAMERA_OVERSCROLL,
+        bottom: INITIAL_FALLBACK_WORLD_SIZE + DEFAULT_CAMERA_OVERSCROLL,
+        underflow: 'center',
+      });
     // A finger lifted over a DOM overlay (HUD) never reaches the canvas, leaving a "ghost" touch in
     // pixi-viewport that breaks later drags/pinches. Drop such touches from window-level events.
     const dropTouch = (e: PointerEvent) => {
@@ -119,18 +143,46 @@ export class GameView {
       });
     this.vfx = new Vfx(this.fxLayer, this.textLayer, this.assets.softDot);
     this.app.renderer.on('resize', (w: number, h: number) => {
-      this.viewport.resize(w, h, 2048, 2048);
+      const worldW = this.map?.width ?? INITIAL_FALLBACK_WORLD_SIZE;
+      const worldH = this.map?.height ?? INITIAL_FALLBACK_WORLD_SIZE;
+      this.viewport.resize(w, h, worldW, worldH);
       this.fitZoomLimits();
     });
     this.fitZoomLimits();
-    this.viewport.setZoom(Math.max(this.viewport.screenWidth / 2048, Math.min(1, this.viewport.screenWidth / 900)), true);
-    this.viewport.moveCenter(1024, 1024);
+    this.viewport.setZoom(
+      Math.max(this.viewport.screenWidth / INITIAL_FALLBACK_WORLD_SIZE, Math.min(1, this.viewport.screenWidth / INITIAL_TARGET_WORLD_WIDTH)),
+      true,
+    );
+    this.viewport.moveCenter(INITIAL_FALLBACK_WORLD_SIZE / 2, INITIAL_FALLBACK_WORLD_SIZE / 2);
     this.app.ticker.add((t) => this.tick(Math.min(0.1, t.deltaMS / 1000)));
   }
 
+  private applyMapViewport(map: MapDef) {
+    const overscroll = mapOverscroll(map);
+    const key = `${map.width}x${map.height}:${overscroll}`;
+    if (this.configuredViewportKey === key) return;
+    const isInitialMap = this.configuredViewportKey === null;
+    this.configuredViewportKey = key;
+    this.viewport.resize(this.viewport.screenWidth, this.viewport.screenHeight, map.width, map.height);
+    this.viewport.clamp({
+      left: -overscroll,
+      top: -overscroll,
+      right: map.width + overscroll,
+      bottom: map.height + overscroll,
+      underflow: 'center',
+    });
+    this.fitZoomLimits();
+    if (!isInitialMap || map.width !== INITIAL_FALLBACK_WORLD_SIZE || map.height !== INITIAL_FALLBACK_WORLD_SIZE) {
+      this.viewport.setZoom(Math.max(this.viewport.screenWidth / map.width, Math.min(1, this.viewport.screenWidth / INITIAL_TARGET_WORLD_WIDTH)), true);
+      this.viewport.moveCenter(map.width / 2, map.height / 2);
+    }
+  }
+
   private fitZoomLimits() {
-    const min = Math.max(this.viewport.screenWidth / 2048, this.viewport.screenHeight / 2048);
-    this.viewport.clampZoom({ minScale: min, maxScale: 2.5 });
+    const worldW = this.map?.width ?? INITIAL_FALLBACK_WORLD_SIZE;
+    const worldH = this.map?.height ?? INITIAL_FALLBACK_WORLD_SIZE;
+    const min = Math.max(this.viewport.screenWidth / worldW, this.viewport.screenHeight / worldH);
+    this.viewport.clampZoom({ minScale: min, maxScale: MAX_ZOOM_SCALE });
     if (this.viewport.scale.x < min) this.viewport.setZoom(min, true);
   }
 
@@ -146,6 +198,7 @@ export class GameView {
   showValley(map: MapDef, pads: Record<PadId, PadState> | null, keep: Pick<KeepState, 'level' | 'hp'>, opts: ValleyOptions = {}) {
     this.stopReplay();
     this.map = map;
+    this.applyMapViewport(map);
     this.ground.removeChildren().forEach((c) => c.destroy({ children: true }));
     this.entities.removeChildren().forEach((c) => c.destroy({ children: true }));
     this.overlay.removeChildren().forEach((c) => c.destroy({ children: true }));
@@ -361,22 +414,25 @@ export class GameView {
   }
 
   private drawGround(map: MapDef) {
-    if (this.assets.has('map_valley')) {
-      const a = this.assets.get('map_valley');
+    const artId = mapArtId(map);
+    const bounds = mapVisualBounds(map);
+    if (this.assets.has(artId)) {
+      const a = this.assets.get(artId);
       const s = new Sprite(a.texture);
-      s.width = map.width;
-      s.height = map.height;
+      s.position.set(bounds.x, bounds.y);
+      s.width = bounds.width;
+      s.height = bounds.height;
       s.eventMode = 'none';
       this.ground.addChild(s);
       return;
     }
     const g = new Graphics();
     g.eventMode = 'none';
-    g.rect(0, 0, map.width, map.height).fill(0x5d8a3a);
+    g.rect(bounds.x, bounds.y, bounds.width, bounds.height).fill(0x5d8a3a);
     // some meadow variation
     for (let i = 0; i < 60; i++) {
-      const x = (i * 733) % map.width;
-      const y = (i * 1297) % map.height;
+      const x = bounds.x + ((i * 733) % bounds.width);
+      const y = bounds.y + ((i * 1297) % bounds.height);
       g.circle(x, y, 60 + ((i * 37) % 90)).fill({ color: i % 2 ? 0x6b9a44 : 0x4f7a33, alpha: 0.5 });
     }
     for (const d of DIRS) {
@@ -440,7 +496,7 @@ export class GameView {
   }
 
   shakeCamera(amount: number) {
-    this.shake = Math.max(this.shake, amount);
+    this.shake = Math.min(MAX_CAMERA_SHAKE_OFFSET * 2, Math.max(this.shake, amount));
   }
 
   focus(x: number, y: number, zoom?: number) {
