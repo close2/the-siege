@@ -1,6 +1,7 @@
 // Offline/demo backend backed by IndexedDB (via `idb`) with a synchronous localStorage mirror.
 import { openDB, type IDBPDatabase } from 'idb';
 import { SIM_VERSION } from '../content/stats';
+import i18n from '../i18n';
 import { isWritable, localDate, seasonClock } from '../sim/calendar';
 import type { ChallengeConfig, HeroClass } from '../sim/types';
 import { ApiError, DRY_RUN_ID, type Backend, type Challenge, type ChallengeSummary, type EventKind, type GameEvent, type User } from './types';
@@ -110,18 +111,18 @@ export class LocalBackend implements Backend {
   }
 
   async rename(name: string) {
-    if (!this.data.user) throw new ApiError(401, 'not registered');
+    if (!this.data.user) throw ApiError.fromCode(401, 'not_registered');
     this.data.user.name = name;
     for (const c of this.data.challenges) for (const m of c.members) if (m.userId === this.data.user.id) m.name = name;
     this.save();
   }
 
   async transferCode(): Promise<{ code: string; expiresAt: number }> {
-    throw new ApiError(400, 'Device transfer needs the server (offline demo mode).');
+    throw ApiError.fromCode(400, 'transfer_needs_server');
   }
 
   async claim(): Promise<User> {
-    throw new ApiError(400, 'Device transfer needs the server (offline demo mode).');
+    throw ApiError.fromCode(400, 'transfer_needs_server');
   }
 
   async listChallenges() {
@@ -130,7 +131,7 @@ export class LocalBackend implements Backend {
 
   async createChallenge(config: ChallengeConfig, heroClass: HeroClass, opts?: { bots?: number }) {
     const u = this.data.user;
-    if (!u) throw new ApiError(401, 'not registered');
+    if (!u) throw ApiError.fromCode(401, 'not_registered');
     const c: Challenge = {
       id: 'c' + rid(6),
       config,
@@ -153,16 +154,16 @@ export class LocalBackend implements Backend {
 
   async startDryRun(heroClass: HeroClass = 'knight') {
     const u = this.data.user;
-    if (!u) throw new ApiError(401, 'not registered');
+    if (!u) throw ApiError.fromCode(401, 'not_registered');
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
     const today = localDate(Date.now(), tz);
     const otherClasses = CLASSES.filter((hc) => hc !== heroClass);
     const c: Challenge = {
       id: DRY_RUN_ID,
       config: {
-        title: 'Dry Run: Hold the Valley',
+        title: i18n.t('dryRun.defaultTitle'),
         type: 'checklist',
-        rules: ['Drink a glass of water', 'Take 5 deep breaths', 'Stretch for 2 minutes'],
+        rules: [i18n.t('dryRun.rule1'), i18n.t('dryRun.rule2'), i18n.t('dryRun.rule3')],
         startDate: today,
         days: 3,
         timeZone: tz,
@@ -198,16 +199,16 @@ export class LocalBackend implements Backend {
   }
 
   async inviteInfo(): Promise<ChallengeSummary> {
-    throw new ApiError(404, 'Invites need the server (offline demo mode).');
+    throw ApiError.fromCode(404, 'invites_need_server');
   }
 
   async join(): Promise<Challenge> {
-    throw new ApiError(404, 'Invites need the server (offline demo mode).');
+    throw ApiError.fromCode(404, 'invites_need_server');
   }
 
   async getChallenge(id: string) {
     const c = this.data.challenges.find((x) => x.id === id);
-    if (!c) throw new ApiError(404, 'challenge not found');
+    if (!c) throw ApiError.fromCode(404, 'challenge_not_found');
     return c;
   }
 
@@ -217,8 +218,8 @@ export class LocalBackend implements Backend {
     const now = this.now(id);
     if (kind === 'hash') {
       const w = seasonClock(c.config, now);
-      if (day > w.resolved) throw new ApiError(409, 'day not resolved yet');
-    } else if (!isWritable(c.config, day, now)) throw new ApiError(409, 'This day is closed.');
+      if (day > w.resolved) throw ApiError.fromCode(409, 'day_not_resolved');
+    } else if (!isWritable(c.config, day, now)) throw ApiError.fromCode(409, 'day_closed');
     const list = (this.data.events[id] ??= []);
     const i = list.findIndex((e) => e.day === day && e.userId === u.id && e.kind === kind);
     if (i >= 0) list.splice(i, 1);

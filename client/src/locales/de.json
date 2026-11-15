@@ -1,0 +1,562 @@
+{
+  "app": {
+    "title": "Die Belagerung",
+    "tagline": "Halte deine Gewohnheiten. Halte die Stellung. Gemeinsam.",
+    "loading": "Lädt…",
+    "loadingValley": "Das Tal wird geladen…",
+    "unknownDevTool": "Unbekanntes Entwickler-Tool. Versuche /dev/sandbox, /dev/map-editor, /dev/gallery oder /dev/vfx."
+  },
+  "common": {
+    "home": "‹ Start",
+    "back": "‹ Zurück",
+    "backSimple": "Zurück",
+    "next": "Weiter",
+    "close": "Schließen",
+    "save": "Speichern",
+    "saved": "Gespeichert",
+    "you": "Du",
+    "bot": "(Bot)",
+    "language": "Sprache",
+    "durationNow": "jetzt",
+    "durationDaysHours": "{{d}} T {{h}} Std",
+    "durationHoursMinutes": "{{h}} Std {{m}} Min",
+    "durationMinutes": "{{m}} Min"
+  },
+  "onboarding": {
+    "whoAreYou": "Wer bist du, Verteidiger?",
+    "yourName": "Dein Name",
+    "namePlaceholder": "z. B. Anna",
+    "begin": "Beginnen",
+    "howItWorks": "📖 Neu hier? So funktioniert Die Belagerung",
+    "otherDeviceLink": "Ich spiele bereits auf einem anderen Gerät",
+    "otherDeviceTitle": "Anderes Gerät nutzen",
+    "otherDeviceHint": "Öffne auf deinem anderen Gerät Einstellungen → „Auf anderem Gerät nutzen“ und gib den Code hier ein.",
+    "transferCode": "Übertragungscode",
+    "codePlaceholder": "ABC123",
+    "continue": "Weiter",
+    "offlineNote": "Offline-Demomodus: Der Fortschritt wird auf diesem Gerät gespeichert; Mitspieler sind Bots.",
+    "howToPlay": "Spielanleitung"
+  },
+  "home": {
+    "help": "📖 Hilfe",
+    "offlineChip": "Offline-Demo · Mitspieler sind Bots",
+    "emptyTitle": "Noch keine Belagerungen",
+    "emptyText": "Starte eine Herausforderung mit Freunden — oder lerne die Grundlagen in einem geführten Probelauf.",
+    "howToPlay": "📖 Spielanleitung",
+    "tryDryRun": "🎯 Probelauf starten",
+    "practicePrefix": "Übung · ",
+    "seasonOver": "Saison beendet",
+    "startsIn": "Beginnt in {{duration}}",
+    "dayOf": "Tag {{day}} von {{total}}",
+    "defenders_one": "{{count}} Verteidiger",
+    "defenders_other": "{{count}} Verteidiger",
+    "newChallenge": "⚔ Neue Herausforderung",
+    "invitePlaceholder": "Einladungscode",
+    "join": "Beitreten",
+    "practice3Day": "🎯 3-Tage-Probelauf üben"
+  },
+  "join": {
+    "inviteSummary_one": "{{creator}} lädt dich ein, das Tal zu verteidigen. Bisher {{count}} Verteidiger · {{days}} Tage ab {{startDate}}.",
+    "inviteSummary_other": "{{creator}} lädt dich ein, das Tal zu verteidigen. Bisher {{count}} Verteidiger · {{days}} Tage ab {{startDate}}.",
+    "chooseHero": "Wähle deinen Helden",
+    "joinButton": "⚔ Der Belagerung beitreten",
+    "notJoinable": "Diese Herausforderung hat bereits begonnen oder ist voll."
+  },
+  "settings": {
+    "title": "Einstellungen",
+    "yourName": "Dein Name",
+    "languageTitle": "Sprache",
+    "soundAndNotifications": "Ton & Benachrichtigungen",
+    "soundEffects": "Soundeffekte",
+    "remindersAndDawn": "Erinnerungen & Morgengrauen-Meldungen",
+    "notificationsOn": "Benachrichtigungen aktiviert",
+    "pushUnsupportedHint": "In diesem Browser nicht unterstützt. Auf dem iPhone: App zuerst zum Home-Bildschirm hinzufügen.",
+    "otherDeviceTitle": "Auf anderem Gerät nutzen",
+    "otherDeviceInstructions": "Erzeuge einen Code und gib ihn auf dem anderen Gerät ein („Ich spiele bereits auf einem anderen Gerät“ oder unten).",
+    "validFor": "gültig für {{time}}",
+    "transferExpired": "abgelaufen",
+    "showTransferCode": "Übertragungscode anzeigen",
+    "useCodeFromOther": "Oder einen Code von einem anderen Gerät verwenden:",
+    "useCode": "Code nutzen",
+    "switchedTo": "Gewechselt zu {{name}}",
+    "about": "Über",
+    "modeLabel": "Modus:",
+    "modeOnline": "Online",
+    "modeOffline": "Offline-Demo (nur dieses Gerät)",
+    "confirmReset": "Alle lokalen Demodaten löschen?",
+    "resetDemoData": "Demodaten zurücksetzen"
+  },
+  "create": {
+    "title": "Neue Herausforderung",
+    "stepWhat": "Was ist die Herausforderung?",
+    "titleLabel": "Titel",
+    "titlePlaceholder": "30 Tage ohne Zucker",
+    "typeLabel": "Art",
+    "typeBinary": "Ja / Nein — eine Regel",
+    "typeChecklist": "Checkliste — mehrere Regeln",
+    "typeNumeric": "Zahlenwert — z. B. Schritte, Minuten",
+    "rulePlaceholder": "Regel {{n}}",
+    "addRule": "+ Regel hinzufügen",
+    "dailyTarget": "Tagesziel",
+    "unit": "Einheit",
+    "betterIs": "Besser ist",
+    "directionHigher": "mehr (mindestens das Ziel)",
+    "directionLower": "weniger (höchstens das Ziel)",
+    "stepWhen": "Wann?",
+    "startDate": "Startdatum",
+    "days": "Tage",
+    "dawnLabel": "Morgengrauen — wann die Schlacht jedes Tages stattfindet (nächster Morgen)",
+    "difficulty": "Schwierigkeit",
+    "diff_very_easy": "Sehr leicht",
+    "diff_easy": "Leicht",
+    "diff_normal": "Normal",
+    "diff_hard": "Schwer",
+    "enemyHorde": "Feindliche Horde",
+    "restDays": "Ruhe- / Pausentage (optional — übersprungen)",
+    "addRestDay": "+ Hinzufügen",
+    "timeZoneHint": "Zeitzone: {{tz}}. Du kannst jeden Tag bis zum Morgengrauen am nächsten Morgen melden.",
+    "chooseHero": "Wähle deinen Helden",
+    "botTeammates": "Bot-Mitspieler: {{count}}",
+    "submit": "⚔ Banner hissen",
+    "presets": {
+      "noSugarTitle": "Kein Zucker",
+      "noSugarRule1": "Heute kein zugesetzter Zucker",
+      "stepsTitle": "8.000 Schritte",
+      "stepsUnit": "Schritte",
+      "cleanTitle": "Gesunder Alltag",
+      "cleanRule1": "Kein Zucker",
+      "cleanRule2": "Kein Alkohol",
+      "cleanRule3": "Um 23:00 Uhr im Bett",
+      "screenTitle": "Weniger Bildschirmzeit",
+      "screenUnit": "Min"
+    }
+  },
+  "lobby": {
+    "gathering": "Die Verteidiger sammeln sich",
+    "beginsIn": "Die Belagerung beginnt in <bold>{{duration}}</bold> ({{startDate}}) und dauert {{days}} Tage.",
+    "inviteFriends": "Lade Freunde ein — sie können bis zum Start beitreten:",
+    "shareText": "Tritt meiner Herausforderung „{{title}}“ bei",
+    "linkCopied": "Link kopiert",
+    "shareInviteLink": "Einladungslink teilen",
+    "startNowDemo": "⏩ Jetzt starten (Demo)",
+    "defenders": "Verteidiger"
+  },
+  "hud": {
+    "seasonComplete": "Saison abgeschlossen",
+    "dayStatus": "Tag {{day}} von {{total}} · Morgengrauen in {{duration}}",
+    "simMismatch": "⚠ Diese Herausforderung nutzt Spielregeln v{{challengeVer}}, diese App läuft mit v{{appVer}}. Schlachten können von deinen Mitspielern abweichen — bitte aktualisiere die App.",
+    "desyncWarning": "⚠ Seit Tag {{day}} nicht mehr synchron mit den Mitspielern. Bitte aktualisiere die App.",
+    "watchDawn": "☀ Morgengrauen {{day}} ansehen",
+    "report": "✔ Melden",
+    "plan": "⚒ Planen",
+    "scout": "👁 Spähen",
+    "backToPlots": "Zurück zu meinen Bauplätzen",
+    "ownersPlot": "Bauplatz von {{name}}",
+    "reportedToast": "Gemeldet — danke, Verteidiger!",
+    "inviteCopiedToast": "Einladungscode {{code}} kopiert"
+  },
+  "replay": {
+    "dawnBanner": "Morgengrauen {{day}}",
+    "skip": "Überspringen ⏭",
+    "hordeDefeated": "⚔ Horde besiegt",
+    "sunrise": "☀ Sonnenaufgang",
+    "subCleared": "jeder Gegner fiel oder brach durch",
+    "subRetreat": "die überlebenden Gegner ziehen sich zurück",
+    "subUntilSunrise": "bis zum Sonnenaufgang — danach ziehen sich Überlebende zurück"
+  },
+  "menu": {
+    "title": "Menü",
+    "howToPlay": "📖 Spielanleitung",
+    "replayDawn": "↻ Morgengrauen {{day}} wiederholen",
+    "lastReport": "📜 Letzter Bericht",
+    "inviteCode": "✉ Einladungscode: {{code}}",
+    "skipToNextDawn": "⏩ Zum nächsten Morgengrauen (Demo)",
+    "restartDryRun": "↻ Probelauf neu starten",
+    "settings": "⚙ Einstellungen",
+    "goldAfterPlans": "Dein Gold nach allen Plänen:"
+  },
+  "coach": {
+    "collapsedTitle": "🎯 Probelauf-Hilfe {{status}}",
+    "statusDawnReady": "· Morgengrauen {{day}} bereit",
+    "statusDayOf": "· Tag {{day}} von {{total}}",
+    "statusComplete": "· Abgeschlossen",
+    "show": "Zeigen ▾",
+    "hide": "Ausblenden ▴",
+    "guide": "📖 Anleitung",
+    "dawnArrivedTitle": "☀ Schritt 4 · Morgengrauen {{day}} ist da!",
+    "dawnArrivedBody": "Alle Meldungen und Pläne wurden festgeschrieben, Gold ausgezahlt, Türme gebaut und die Schlacht geschlagen. Tippe unten auf <bold>☀ Morgengrauen {{day}} ansehen</bold>, um die Wiederholung zu sehen!",
+    "completeTitle": "🎉 Probelauf abgeschlossen!",
+    "completeBody": "Du hast alle 3 Tage gemeistert und dich dem Boss gestellt! In einer echten Herausforderung bleibt jeder Tag bis zum Morgengrauen am nächsten Morgen ({{dawnTime}}) offen.",
+    "restartDryRun": "↻ Probelauf neu starten",
+    "startRealChallenge": "⚔ Echte Herausforderung starten",
+    "headerDay": "🎯 Probelauf · Tag {{day}} von {{total}}",
+    "chipScout": "{{prefix}} Spähen",
+    "chipReport": "{{prefix}} Melden",
+    "chipBuildPlan": "{{prefix}} Bauen & Planen",
+    "chipSkipDawn": "⏩ Zu Morgengrauen {{day}}",
+    "hintScoutDay1": "<bold>Schritt 1 · Spähen:</bold> Tippe auf <bold>👁 Spähen</bold> (oder einen roten Straßenpfeil), um zu sehen, welche Straßen die Horde heute Nacht angreift und welche Gegnertypen anrücken.",
+    "hintScoutDay2": "<bold>Tag 2 · Stärkere Feinde:</bold> Im Verlauf der Saison erscheinen neue Gegnertypen. Tippe auf <bold>👁 Spähen</bold>, um die Straßen für heute Nacht zu prüfen!",
+    "hintScoutDay3": "<bold>Tag 3 · Boss-Nacht!</bold> In der letzten Nacht (und an jedem 7. Tag) marschiert <bold>{{bossName}}</bold>. Tippe auf <bold>👁 Spähen</bold>, um die Boss-Straße zu finden!",
+    "hintReportDay1": "<bold>Schritt 2 · Gewohnheit melden:</bold> Tippe auf <bold>✔ Melden</bold>, um deine heutige Checkliste einzutragen. Voller Erfolg bringt volles Gold (+72g) und +2 Helden-EP; selbst eine ehrliche Teil-/Fehlmeldung bringt Gold und löst die <bold>Teamsammlung</bold> (+15 % Turmtempo) aus!",
+    "hintReportOther": "<bold>Schritt 2 · Meldung für Tag {{day}}:</bold> Tippe auf <bold>✔ Melden</bold>. (Tipp: Hake testweise nur 1 oder 2 Kästchen ab, um zu sehen, wie Teilmeldungen Gold zahlen, oder alle 3 für volles Gold!)",
+    "hintOrdersDay1": "<bold>Schritt 3 · Türme bauen ({{gold}}g verfügbar):</bold> Tippe auf ein goldenes <bold>＋</bold> auf deinen Bauplätzen, um Türme zu errichten (probiere einen <bold>Bogenturm</bold> und eine <bold>Kaserne</bold>). <bold>⚒ Planen</bold> zeigt alle Bauplätze und die Haltung deines Helden.",
+    "hintOrdersDay2": "<bold>Schritt 3 · Ausbauen & teilen ({{gold}}g verfügbar):</bold> Tippe auf einen Turm mit grünem <bold>⬆</bold> (oder nutze <bold>⚒ Planen → Deine Bauplätze</bold>) für <bold>Stufe 2</bold>, baue einen <bold>Magierturm</bold> gegen Gepanzerte oder spende Gold an den <bold>Bergfried</bold>.",
+    "hintOrdersDay3": "<bold>Schritt 3 · Vorbereitung auf die Boss-Nacht ({{gold}}g verfügbar):</bold> Baue/verbessere Türme und öffne <bold>⚒ Planen</bold>, um deinen <bold>Helden</bold> zur Verstärkung auf die Boss-Straße zu schicken!",
+    "hintReady": "<bold>Schritt 4 · Bereit für Morgengrauen {{day}}!</bold> In einer echten Herausforderung würdest du bis morgen früh ({{dawnTime}}) warten. Tippe im Probelauf unten auf <bold>⏩ Zu Morgengrauen {{day}}</bold>!"
+  },
+  "checkin": {
+    "title": "Tagesmeldung",
+    "dayButton": "Tag {{day}}{{check}}",
+    "dayDateHint": "Tag {{day}} · {{date}} — änderbar bis zum Morgengrauen.",
+    "allKept": "Alle erfüllt",
+    "howMuchLower": "Wie viel? (Ziel: höchstens {{target}} {{unit}})",
+    "howMuchHigher": "Wie viel? (Ziel: {{target}} {{unit}})",
+    "statusInspired": "🔥 Inspiriert!",
+    "statusTarget": "✔ Ziel erreicht",
+    "statusHonest": "Ehrliche Meldung — zahlt sich dennoch aus",
+    "honestyHint": "Ehrlichkeit lohnt sich: Auch ein verfehlter Tag bringt {{minGold}}+ Gold. Ohne Meldung gibt es nichts und dein Held bleibt zu Hause.",
+    "submit": "Melden"
+  },
+  "build": {
+    "buildingHeader": "{{name}} · Stufe {{level}}",
+    "ruins": "Ruinen",
+    "emptyPlot": "Freier Bauplatz",
+    "barracksLine": "{{soldiers}} Soldaten · je {{hp}} LP",
+    "towerLine": "{{dmg}} Schdn · Reichweite {{range}}",
+    "hpStat": "LP {{hp}}/{{maxHp}}",
+    "upgradeTo": "Ausbau auf Stufe {{level}}",
+    "repair": "Reparieren",
+    "repairDesc": "Volle Trefferpunkte vor dem Morgengrauen wiederherstellen.",
+    "fullyUpgraded": "Voll ausgebaut und in bestem Zustand.",
+    "undoPlotPlans": "↺ Heutige Pläne für diesen Bauplatz zurücknehmen"
+  },
+  "plan": {
+    "title": "Pläne fürs Morgengrauen",
+    "subtitle": "Tippe auf deine leuchtenden Bauplätze auf der Karte, um zu bauen. Pläne sind bis zum Morgengrauen änderbar.",
+    "noPlans": "Noch keine Pläne.",
+    "yourPlots": "Deine Bauplätze",
+    "yourPlotsHint": "Baue auf freien Plätzen, rüste Türme auf (stärker, mehr Reichweite, mehr LP) oder repariere Schäden.",
+    "buildingLv": "{{name}} · St. {{level}}",
+    "freePlot": "Freier Bauplatz",
+    "plotIndex": " · Platz {{n}}",
+    "buildButton": "Bauen",
+    "showOnMap": "Auf Karte zeigen",
+    "yourHero": "Dein Held",
+    "heroStats": "St. {{level}} · {{hp}} Basis-LP",
+    "statusTonight": "Status heute Nacht: {{status}}",
+    "heroStatus": {
+      "absent": "bleibt zu Hause (noch keine Meldung)",
+      "weary": "erschöpft",
+      "normal": "einsatzbereit",
+      "inspired": "inspiriert"
+    },
+    "stanceOwn": "Eigenen Sektor verteidigen",
+    "stanceKeep": "Den Bergfried verteidigen",
+    "stanceReinforce": "{{name}} verstärken ({{sector}})",
+    "stanceHelp": {
+      "own": "Dein Held bewacht den Sammelpunkt deines ersten Sektors und bekämpft vorbeiziehende Feinde.",
+      "keep": "Letzte Verteidigungslinie: Dein Held steht am Bergfried und greift alles an, was das Ende einer Straße erreicht (größere Reichweite als üblich).",
+      "neighbor": "Dein Held kämpft im Sektor eines Mitspielers statt im eigenen — ideal, wenn dessen Straße einer schweren Welle oder dem Boss gegenübersteht."
+    },
+    "shareGold": "Gold teilen",
+    "keepProgress": "Bergfried Stufe {{level}} · Kasse {{fund}} / {{nextFund}} für die nächste Stufe (mehr LP, stärkere Schützen)",
+    "keepMax": "Bergfried Stufe {{level}} · Kasse {{fund}} (Maximalstufe)",
+    "theKeep": "Der Bergfried",
+    "give": "Geben",
+    "orders": {
+      "build": "{{name}} bauen",
+      "upgrade": "Gebäude ausbauen",
+      "repair": "Gebäude reparieren",
+      "donateKeep": "{{amount}} Gold an den Bergfried spenden",
+      "donatePlayer": "{{amount}} Gold an {{name}} geben",
+      "stanceOwn": "Held verteidigt eigenen Sektor",
+      "stanceKeep": "Held verteidigt den Bergfried",
+      "stanceNeighbor": "Held verstärkt {{sector}}"
+    }
+  },
+  "intent": {
+    "title": "Spähbericht · Morgengrauen {{day}}",
+    "seasonOver": "Die Saison ist vorüber.",
+    "bossBanner": "<bold>Boss-Nacht!</bold> {{bossName}} marschiert. Besiegt den Boss für einen Bonusstern und je +{{gold}} Gold.",
+    "bestiaryTitle": "Bestiarium ({{themeName}})",
+    "bossHp": "riesig",
+    "enemyHp": "{{hp}} LP"
+  },
+  "report": {
+    "titleFell": "Der Bergfried ist gefallen…",
+    "titleFlawless": "Makellose Verteidigung!",
+    "titleHeld": "Die Linie hat gehalten",
+    "dawnLabel": "Morgengrauen {{day}}",
+    "keepSummary": "Bergfried {{before}} → {{after}}",
+    "leaks_one": "{{count}} durchgebrochen",
+    "leaks_other": "{{count}} durchgebrochen",
+    "bossSlain": "⚔ {{bossName}} wurde erschlagen! Bonusstern und je +{{gold}} Gold.",
+    "rally": "Teamsammlung! Alle haben gemeldet — Türme feuerten schneller.",
+    "keepRebuildHint": "Er wird mit halber Stärke wieder aufgebaut. Sammelt euch und repariert!",
+    "yourReport": "Deine Meldung",
+    "reportNone": "keine — Held blieb zu Hause",
+    "reportTarget": "Ziel erreicht",
+    "reportMiss": "ehrliche Fehlmeldung",
+    "goldEarned": "Verdientes Gold",
+    "combatStats": "Dein Schaden · Siege · Blocks",
+    "notCarriedOut": "Nicht ausgeführt: {{items}}",
+    "sunriseRetreat": "☀ Bei Sonnenaufgang zogen sich diese Feinde zurück (kein Schaden, aber auch keine Beute): {{enemies}}",
+    "escapedSingle": "{{name}} ({{hp}}% LP)",
+    "escapedMultiple": "{{count}}× {{name}}",
+    "heroesOfNight": "Helden der Nacht",
+    "mvpDamage": "🏹 Meister Schaden:",
+    "mvpWall": "🛡 Das Bollwerk:",
+    "mvpPatron": "💰 Gönner:",
+    "seasonComplete": "Saison abgeschlossen!",
+    "rankSummary": "Rang: <bold>{{rank}}</bold> · {{pct}} % der Sterne",
+    "ranks": {
+      "bronze": "Bronze",
+      "silver": "Silber",
+      "gold": "Gold",
+      "legendary": "Legendär"
+    },
+    "watchAgain": "↻ Nochmal ansehen",
+    "onward": "Weiter"
+  },
+  "tutorial": {
+    "title": "Spielanleitung",
+    "intro": "<bold>Die Belagerung</bold> ist eine kooperative Gewohnheits-Herausforderung und Basisverteidigung für <bold>2–8 Spieler</bold> über <bold>7–90 Tage</bold>. Jeder Spieler bewacht einen Sektor des Tals; eure täglichen Gewohnheitsmeldungen im echten Leben bringen Gold und schicken euren Helden in die Schlacht, bevor die feindliche Horde im <bold>Morgengrauen</bold> angreift.",
+    "tabs": {
+      "timeline": "⏳ Ablauf",
+      "daily": "✔ Tagesrunde",
+      "defenders": "🏰 Türme & Helden",
+      "enemies": "👾 Feinde & Sterne"
+    },
+    "timeline": {
+      "s1Title": "1. Vor Tag 1 · Verteidiger versammeln (Lobby)",
+      "s1Bullet1": "• <bold>Ein Spieler erstellt die Herausforderung:</bold> wähle die Art der Gewohnheit (<i>Ja/Nein</i>, <i>Checkliste</i> oder <i>Zahlenwert</i>), Startdatum, Dauer (7–90 aktive Tage), Schwierigkeit und die Uhrzeit fürs <bold>Morgengrauen</bold> (Standard 11:00).",
+      "s1Bullet2": "• <bold>Teile den 6-stelligen Einladungscode:</bold> Freunde treten vor dem Startdatum bei und wählen ihre <bold>Heldenklasse</bold>. Sobald Tag 1 beginnt, steht das Team fest und Straßen/Sektoren werden zugeteilt.",
+      "s2Title": "2. Jeden Tag & Abend · Melden & Planen (00:00 → Morgengrauen am Folgetag)",
+      "s2Intro": "Jeder aktive Tag ist von <bold>00:00 Uhr</bold> dieses Kalendertags bis zum <bold>Morgengrauen am nächsten Morgen</bold> geöffnet (z. B. 11:00 Uhr am Folgetag — du kannst also abends oder beim Frühstück melden):",
+      "s2Scout": "• <bold>👁 Spähen:</bold> Prüfe, über welche Straßen die heutige Welle anrückt und welcher besondere Gegnertyp im Fokus steht.",
+      "s2Report": "• <bold>✔ Melden:</bold> Trage ein, ob du deine Gewohnheit eingehalten hast. Das bringt Gold, steigert deinen Helden und schickt ihn heute Nacht in den Kampf.",
+      "s2Plan": "• <bold>⚒ Planen & Bauen:</bold> Tippe auf deine <bold>leuchtenden Bauplätze</bold>, um Türme zu bauen, auszubauen oder zu reparieren, die Haltung deines Helden zu wählen oder Gold zu teilen. <i>Alles bleibt bis zum Morgengrauen frei änderbar!</i>",
+      "s3Title": "3. Im Morgengrauen (nächster Morgen) · Der nächtliche Sturm",
+      "s3StepsIntro": "Wenn das Morgengrauen anbricht, schließt der Tag und wird automatisch in 4 Schritten ausgewertet:",
+      "s3StepsFlow": "<bold>1. Wirtschaft</bold> (Gold & EP ausgezahlt, Sammlung geprüft) → <bold>2. Befehle</bold> (Türme gebaut/ausgebaut, Gold geteilt) → <bold>3. Schlacht</bold> (Feinde marschieren zum Bergfried) → <bold>4. Bericht</bold> (0–3 ★ Sterne & Helden der Nacht).",
+      "s3Watch": "• Öffne die App jederzeit nach dem Morgengrauen und tippe auf <bold>☀ Morgengrauen ansehen</bold>, um die Schlacht zu verfolgen und den neuen Tag zu planen."
+    },
+    "daily": {
+      "s1Title": "✔ Schritt 1: Gewohnheit melden (Ehrlichkeit zahlt sich immer aus!)",
+      "s1Intro": "Deine tägliche Meldung bestimmt dein Gold, Helden-EP und den Zustand deines Helden für die Schlacht:",
+      "inspired": "🔥 <bold>Inspiriert (150%+ beim Zahlenziel):</bold> Basis <bold>{{gold}}g</bold> · <bold>+{{xp}} EP</bold> · Held erhält heute Nacht <bold>+20 % LP & Schaden</bold>.",
+      "target": "✅ <bold>Ziel erreicht (100 %):</bold> Basis <bold>{{gold}}g</bold> · <bold>+{{xp}} EP</bold> · Held kämpft mit voller Kraft.",
+      "miss": "🤝 <bold>Ehrliche Fehlmeldung (unter 100 %):</bold> Basis <bold>{{minGold}}–{{maxGold}}g</bold> · <bold>+{{xp}} EP</bold> · Held kämpft trotzdem (<i>Erschöpft</i>, −20 % Schdn). <bold>Ehrlich zu melden ist immer viel besser als Schweigen!</bold>",
+      "none": "💤 <bold>Keine Meldung:</bold> <bold>0g</bold> · <bold>0 EP</bold> · Held <bold>bleibt zu Hause</bold>. Nach {{dormantAfter}} verpassten Meldungen in Folge gilt dein Spieler als <i>Ruhend</i>, bis du wieder meldest.",
+      "rally": "<bold>Teamsammlung:</bold> Sobald <bold>jeder</bold> Spieler eine Meldung abgibt (auch eine ehrliche Fehlmeldung!), weht das Sammlungsbanner am Bergfried und <bold>alle Türme feuern heute Nacht +15 % schneller</bold>.",
+      "s2Title": "⚒ Schritt 2: Türme bauen, Helden positionieren & Gold teilen",
+      "s2Plots": "• <bold>Tippe auf deine leuchtenden Bauplätze</bold> (goldene <bold>＋</bold>-Markierungen), um einen Stufe-1-Turm zu <bold>bauen</bold>. <bold>Tippe auf einen eigenen Turm</bold>, um ihn <bold>auszubauen</bold> (Stufe 1 → 2 → 3) oder Kampfschäden zu <bold>reparieren</bold> — ein grünes <bold>⬆</bold> zeigt bezahlbare Ausbauten. <bold>⚒ Planen → Deine Bauplätze</bold> listet alle auf. Mit <bold>📍</bold> springst du zurück zu deinen Plätzen.",
+      "s2Hero": "• <bold>Öffne ⚒ Planen</bold>, um zu wählen, wo dein <bold>Held</bold> kämpft: eigenen Sektor schützen, den Bergfried bewachen (letzte Linie am Ende aller Straßen) oder <bold>die Straße eines Mitspielers verstärken</bold>!",
+      "s2Share": "• <bold>Gold teilen:</bold> Unter <bold>⚒ Planen</bold> kannst du Gold (mind. {{minDonate}}g) an Mitspieler senden oder in die <bold>Bergfried-Kasse</bold> spenden ({{fund2}}g → St. 2, {{fund3}}g → St. 3 für mehr LP und stärkere Bergfried-Schützen)."
+    },
+    "defenders": {
+      "towersHeading": "Türme (St. 1 → St. 3)",
+      "towersNote": "Türme haben {{hpList}} LP (St. 1/2/3). Belagerungsfeinde beschädigen sie; bei 0 LP wird ein Turm zu Ruinen und muss neu gebaut werden.",
+      "archerRole": "Schnelle physische Einzelziel-Pfeile · trifft Boden & Luft",
+      "archerDetails": "{{dmg}} Schdn · Reichweite {{range}} · {{rate}} Schuss/s",
+      "barracksRole": "Bildet Fußsoldaten aus, die Bodenfeinde auf der Straße blockieren",
+      "barracksDetails": "{{soldiers}} Soldaten · {{hp}} LP · {{dmg}} Schdn/s (Respawn {{respawn}}s)",
+      "mageRole": "Magische Blitze ignorieren Rüstung · trifft Boden & Luft",
+      "mageDetails": "{{dmg}} Schdn · Reichweite {{range}} · {{rate}} Schuss/s",
+      "catapultRole": "Langsamer, schwerer Flächenschaden gegen Bodengruppen · trifft keine Flieger",
+      "catapultDetails": "{{dmg}} Flächenschdn · Reichweite {{range}} · {{rate}} Schuss/s",
+      "heroesHeading": "Heldenklassen (St. 1 → St. 5)",
+      "heroesNote": "Helden erhalten +12 % LP & Schaden pro Stufe und kehren 10s nach einer Niederlage zurück — sofern du heute gemeldet hast!",
+      "heroStatLine": "{{hp}} LP · {{dmg}} Schdn"
+    },
+    "enemies": {
+      "heading": "{{themeName}} & Konter",
+      "bossNight": "Boss-Nacht",
+      "enemyStats": "{{hp}} LP · Durchbruch −{{leak}} Bergfried-LP",
+      "starsHeading": "Sterne, Boss-Nächte & Bergfried-Erholung",
+      "starsLine": "• <bold>★★★:</bold> 0 Durchbrüche · <bold>★★:</bold> Bergfried verlor ≤10 % LP · <bold>★:</bold> Bergfried hielt stand · <bold>0 ★:</bold> Bergfried fiel.",
+      "noGameOver": "• <bold>Kein Game Over:</bold> Fällt der Bergfried, wird er am nächsten Morgen mit <bold>50 % LP</bold> wiederaufgebaut (und heilt täglich +5 LP).",
+      "bossNights": "• <bold>Boss-Nächte:</bold> An jedem 7. aktiven Tag (ab 14-Tage-Saisons) und in der <bold>letzten Nacht</bold>. Der Sieg über den Boss bringt jedem Verteidiger <bold>+1 Bonusstern</bold> und <bold>+{{gold}} Gold</bold>!"
+    },
+    "dryRunCard": {
+      "title": "🎯 Interaktiver Probelauf (3-Tage-Training)",
+      "desc": "Übe Spähen, Melden, Turmbau und den Sprung zum Morgengrauen in einer geführten 3-Tage-Minisaison mit zwei Bot-Mitspielern (<bold>Brin</bold> & <bold>Mara</bold>) — gekrönt vom Bosskampf an Tag 3!",
+      "start": "⚔ 3-Tage-Probelauf starten"
+    }
+  },
+  "canvas": {
+    "keepLevel": "Bergfried Stufe {{level}}!",
+    "rally": "SAMMLUNG +{{pct}}%",
+    "resting": "{{name}} (ruht)",
+    "waveCount": "×{{total}}",
+    "waveBoss": "×{{total}} + BOSS"
+  },
+  "heroes": {
+    "knight": {
+      "name": "Ritter",
+      "text": "Zäher Nahkämpfer. Blockiert zwei Feinde gleichzeitig."
+    },
+    "ranger": {
+      "name": "Waldläufer",
+      "text": "Bogenschütze mit großer Reichweite. Trifft Flieger."
+    },
+    "priest": {
+      "name": "Priesterin",
+      "text": "Heilige Magie, die Rüstung ignoriert und nahe Verbündete heilt."
+    }
+  },
+  "buildings": {
+    "archer": {
+      "name": "Bogenturm",
+      "text": "Schnelle Pfeile. Trifft Flieger."
+    },
+    "barracks": {
+      "name": "Kaserne",
+      "text": "Soldaten blockieren die Straße."
+    },
+    "mage": {
+      "name": "Magierturm",
+      "text": "Magieblitze durchdringen Rüstung."
+    },
+    "catapult": {
+      "name": "Katapult",
+      "text": "Langsamer Flächenschaden. Nur Boden."
+    }
+  },
+  "roads": {
+    "N": "Nordwest-Straße",
+    "E": "Nordost-Straße",
+    "S": "Südost-Straße",
+    "W": "Südwest-Straße",
+    "ring": {
+      "outer": "außen",
+      "inner": "innen"
+    }
+  },
+  "themes": {
+    "roleTips": {
+      "grunt": "Einfacher Fußsoldat.",
+      "runner": "Schnell! Bogenschützen und Soldaten fangen sie ab.",
+      "brute": "Gepanzert — Pfeile kratzen ihn kaum. Nutze Magier.",
+      "flyer": "Fliegt über Soldaten hinweg. Nur Bogentürme, Magier, Waldläufer und Priesterinnen treffen ihn.",
+      "siege": "Zerschmettert Gebäude im Vorbeigehen. Schnell ausschalten; danach reparieren.",
+      "boss": "Boss. Enorme Lebenspunkte, beschleunigt nahe Feinde."
+    },
+    "sugar": {
+      "name": "Die Zuckerhorde",
+      "bossName": "Das Zuckergespenst",
+      "roles": {
+        "grunt": { "name": "Gummigrunzer", "plural": "Gummigrunzer" },
+        "runner": { "name": "Bonbonkobold", "plural": "Bonbonkobolde" },
+        "brute": { "name": "Schokokoloss", "plural": "Schokokolosse" },
+        "flyer": { "name": "Zuckerwatte-Fledermaus", "plural": "Zuckerwatte-Fledermäuse" },
+        "siege": { "name": "Tortengolem", "plural": "Tortengolems" },
+        "boss": { "name": "Das Zuckergespenst", "plural": "Das Zuckergespenst" }
+      }
+    },
+    "sloth": {
+      "name": "Der Trägheitssumpf",
+      "bossName": "Der Mooskoloss",
+      "roles": {
+        "grunt": { "name": "Schlummerkriecher", "plural": "Schlummerkriecher" },
+        "runner": { "name": "Kissengeist", "plural": "Kissengeister" },
+        "brute": { "name": "Sofatroll", "plural": "Sofatrolle" },
+        "flyer": { "name": "Traummotte", "plural": "Traummotten" },
+        "siege": { "name": "Torfhüne", "plural": "Torfhünen" },
+        "boss": { "name": "Der Mooskoloss", "plural": "Der Mooskoloss" }
+      }
+    },
+    "doom": {
+      "name": "Der Doomscroll-Schwarm",
+      "bossName": "Der Endlos-Feed",
+      "roles": {
+        "grunt": { "name": "Bildschirmwandler", "plural": "Bildschirmwandler" },
+        "runner": { "name": "Ping-Gremlin", "plural": "Ping-Gremlins" },
+        "brute": { "name": "Rauschgolem", "plural": "Rauschgolems" },
+        "flyer": { "name": "Glitch-Auge", "plural": "Glitch-Augen" },
+        "siege": { "name": "Turm-Monolith", "plural": "Turm-Monolithen" },
+        "boss": { "name": "Der Endlos-Feed", "plural": "Der Endlos-Feed" }
+      }
+    },
+    "ember": {
+      "name": "Das Glutheer",
+      "bossName": "Der Aschenherrscher",
+      "roles": {
+        "grunt": { "name": "Aschenkobold", "plural": "Aschenkobolde" },
+        "runner": { "name": "Funkenhund", "plural": "Funkenhunde" },
+        "brute": { "name": "Basaltkoloss", "plural": "Basaltkolosse" },
+        "flyer": { "name": "Glutdrache", "plural": "Glutdrachen" },
+        "siege": { "name": "Magmaramme", "plural": "Magmarammen" },
+        "boss": { "name": "Der Aschenherrscher", "plural": "Der Aschenherrscher" }
+      }
+    }
+  },
+  "dryRun": {
+    "defaultTitle": "Probelauf: Haltet das Tal",
+    "rule1": "Ein Glas Wasser trinken",
+    "rule2": "5 tiefe Atemzüge nehmen",
+    "rule3": "2 Minuten dehnen"
+  },
+  "errors": {
+    "network_offline": "Netzwerkfehler — bist du offline?",
+    "database_error": "Datenbankfehler.",
+    "missing_token": "Bitte melde dich zuerst an.",
+    "invalid_token": "Sitzung ungültig — bitte neu registrieren.",
+    "not_registered": "Nicht registriert.",
+    "invalid_name": "Der Name muss {{min}}–{{max}} Zeichen lang sein.",
+    "invalid_transfer_code": "Code ungültig oder abgelaufen.",
+    "transfer_needs_server": "Geräteübertragung erfordert den Server (Offline-Demomodus).",
+    "invites_need_server": "Einladungen erfordern den Server (Offline-Demomodus).",
+    "invalid_title": "Der Titel muss {{min}}–{{max}} Zeichen lang sein.",
+    "rules_missing": "Regeln fehlen.",
+    "invalid_rule_text": "Ungültiger Regeltext.",
+    "invalid_target": "Das Ziel muss größer als 0 sein.",
+    "invalid_direction": "Richtung muss höher oder niedriger sein.",
+    "invalid_type_rules": "Ungültige Herausforderungsart oder Regeln.",
+    "invalid_difficulty": "Ungültige Schwierigkeit.",
+    "invalid_theme": "Ungültige feindliche Horde.",
+    "invalid_calendar": "Ungültige Zeitplaneinstellungen.",
+    "invalid_days": "Die Dauer muss {{min}}–{{max}} Tage betragen.",
+    "too_many_inactive_dates": "Zu viele Pausentage.",
+    "start_date_past": "Das Startdatum liegt in der Vergangenheit.",
+    "challenge_not_found": "Herausforderung nicht gefunden.",
+    "invalid_hero_class": "Ungültige Heldenklasse.",
+    "invite_not_found": "Einladungscode nicht gefunden.",
+    "season_already_started": "Die Saison hat bereits begonnen.",
+    "challenge_full": "Diese Herausforderung ist voll.",
+    "invalid_event_kind": "Ungültige Aktion.",
+    "payload_too_large": "Datenpaket zu groß.",
+    "invalid_day": "Ungültiger Tag.",
+    "day_not_resolved": "Dieser Tag wurde noch nicht ausgewertet.",
+    "day_not_started": "Dieser Tag hat noch nicht begonnen.",
+    "day_closed": "Dieser Tag ist geschlossen — das Morgengrauen ist vorüber.",
+    "push_disabled": "Push-Benachrichtigungen sind auf dem Server deaktiviert.",
+    "invalid_endpoint": "Ungültiger Push-Endpunkt.",
+    "queued_write_dropped": "Deine {{kindLabel}} für Tag {{day}} konnte nicht gespeichert werden: {{reason}}",
+    "eventKind_checkin": "Meldung",
+    "eventKind_orders": "Planung",
+    "eventKind_hash": "Synchronisationsprüfung"
+  },
+  "skipReasons": {
+    "unknown_pad": "unbekannter Bauplatz",
+    "not_your_pad": "nicht dein Bauplatz",
+    "pad_occupied": "Bauplatz belegt",
+    "unknown_building": "unbekanntes Gebäude",
+    "not_enough_gold": "nicht genug Gold",
+    "nothing_to_upgrade": "nichts zum Ausbauen",
+    "max_level": "Maximalstufe erreicht",
+    "nothing_to_repair": "nichts zu reparieren",
+    "not_damaged": "nicht beschädigt",
+    "minimum_donate": "mindestens {{min}} Gold",
+    "unknown_player": "unbekannter Spieler",
+    "unknown_sector": "unbekannter Sektor",
+    "unknown_stance": "unbekannte Haltung",
+    "unknown_order": "unbekannter Befehl"
+  },
+  "push": {
+    "iosAddHomeScreen": "Füge auf dem iPhone die App zuerst zum Home-Bildschirm hinzu (Teilen → Zum Home-Bildschirm) und aktiviere die Benachrichtigungen dort.",
+    "notSupported": "Benachrichtigungen werden in diesem Browser nicht unterstützt.",
+    "needsServer": "Benachrichtigungen erfordern den Server.",
+    "permissionDenied": "Berechtigung für Benachrichtigungen wurde nicht erteilt."
+  }
+}

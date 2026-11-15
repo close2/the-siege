@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useApp } from '../App';
+import { formatDate } from '../i18n/format';
 import type { ChallengeSummary } from '../net/types';
 import type { HeroClass } from '../sim/types';
 import { HeroPicker } from './common';
 
 export function Join({ code }: { code: string }) {
+  const { t } = useTranslation();
   const { backend, navigate, user } = useApp();
   const [info, setInfo] = useState<ChallengeSummary | null>(null);
   const [heroClass, setHeroClass] = useState<HeroClass>('ranger');
@@ -36,25 +39,30 @@ export function Join({ code }: { code: string }) {
   return (
     <div className="screen bg-art col">
       <button className="btn small" style={{ alignSelf: 'flex-start' }} onClick={() => navigate('/')}>
-        ‹ Home
+        {t('common.home')}
       </button>
       {error && <div className="error">{error}</div>}
       {info && (
         <div className="panel col">
           <h2 className="selectable">{info.title}</h2>
           <div className="selectable">
-            {info.creatorName} invites you to defend the valley. {info.memberCount} defender{info.memberCount === 1 ? '' : 's'} so far · {info.days} days from {info.startDate}.
+            {t('join.inviteSummary', {
+              creator: info.creatorName,
+              count: info.memberCount,
+              days: info.days,
+              startDate: formatDate(info.startDate),
+            })}
           </div>
           {info.joinable ? (
             <>
-              <h3>Choose your hero</h3>
+              <h3>{t('join.chooseHero')}</h3>
               <HeroPicker value={heroClass} onChange={setHeroClass} />
               <button className="btn gold block" disabled={busy} onClick={join}>
-                ⚔ Join the siege
+                {t('join.joinButton')}
               </button>
             </>
           ) : (
-            <div className="error">This challenge has already started or is full.</div>
+            <div className="error">{t('join.notJoinable')}</div>
           )}
         </div>
       )}

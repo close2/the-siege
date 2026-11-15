@@ -1,0 +1,562 @@
+{
+  "app": {
+    "title": "The Siege",
+    "tagline": "Keep your habits. Hold the line. Together.",
+    "loading": "Loading…",
+    "loadingValley": "Loading the valley…",
+    "unknownDevTool": "Unknown dev tool. Try /dev/sandbox, /dev/map-editor, /dev/gallery or /dev/vfx."
+  },
+  "common": {
+    "home": "‹ Home",
+    "back": "‹ Back",
+    "backSimple": "Back",
+    "next": "Next",
+    "close": "Close",
+    "save": "Save",
+    "saved": "Saved",
+    "you": "You",
+    "bot": "(bot)",
+    "language": "Language",
+    "durationNow": "now",
+    "durationDaysHours": "{{d}}d {{h}}h",
+    "durationHoursMinutes": "{{h}}h {{m}}m",
+    "durationMinutes": "{{m}}m"
+  },
+  "onboarding": {
+    "whoAreYou": "Who are you, defender?",
+    "yourName": "Your name",
+    "namePlaceholder": "e.g. Anna",
+    "begin": "Begin",
+    "howItWorks": "📖 New here? How The Siege works",
+    "otherDeviceLink": "I already play on another device",
+    "otherDeviceTitle": "Use another device",
+    "otherDeviceHint": "On your other device open Settings → \"Use on another device\" and enter the code here.",
+    "transferCode": "Transfer code",
+    "codePlaceholder": "ABC123",
+    "continue": "Continue",
+    "offlineNote": "Offline demo mode: progress is stored on this device; teammates are bots.",
+    "howToPlay": "How to Play"
+  },
+  "home": {
+    "help": "📖 Help",
+    "offlineChip": "Offline demo · teammates are bots",
+    "emptyTitle": "No sieges yet",
+    "emptyText": "Start a challenge with friends — or learn the ropes with a guided dry run.",
+    "howToPlay": "📖 How to play",
+    "tryDryRun": "🎯 Try a dry run",
+    "practicePrefix": "Practice · ",
+    "seasonOver": "Season over",
+    "startsIn": "Starts in {{duration}}",
+    "dayOf": "Day {{day}} of {{total}}",
+    "defenders_one": "{{count}} defender",
+    "defenders_other": "{{count}} defenders",
+    "newChallenge": "⚔ New challenge",
+    "invitePlaceholder": "Invite code",
+    "join": "Join",
+    "practice3Day": "🎯 Practice in a 3-day dry run"
+  },
+  "join": {
+    "inviteSummary_one": "{{creator}} invites you to defend the valley. {{count}} defender so far · {{days}} days from {{startDate}}.",
+    "inviteSummary_other": "{{creator}} invites you to defend the valley. {{count}} defenders so far · {{days}} days from {{startDate}}.",
+    "chooseHero": "Choose your hero",
+    "joinButton": "⚔ Join the siege",
+    "notJoinable": "This challenge has already started or is full."
+  },
+  "settings": {
+    "title": "Settings",
+    "yourName": "Your name",
+    "languageTitle": "Language",
+    "soundAndNotifications": "Sound & notifications",
+    "soundEffects": "Sound effects",
+    "remindersAndDawn": "Reminders & Dawn notifications",
+    "notificationsOn": "Notifications on",
+    "pushUnsupportedHint": "Not supported in this browser. On iPhone: add the app to the home screen first.",
+    "otherDeviceTitle": "Use on another device",
+    "otherDeviceInstructions": "Generate a code and enter it on the other device (\"I already play on another device\" or below).",
+    "validFor": "valid for {{time}}",
+    "transferExpired": "expired",
+    "showTransferCode": "Show transfer code",
+    "useCodeFromOther": "Or use a code from another device:",
+    "useCode": "Use code",
+    "switchedTo": "Switched to {{name}}",
+    "about": "About",
+    "modeLabel": "Mode:",
+    "modeOnline": "Online",
+    "modeOffline": "Offline demo (this device only)",
+    "confirmReset": "Delete all local demo data?",
+    "resetDemoData": "Reset demo data"
+  },
+  "create": {
+    "title": "New challenge",
+    "stepWhat": "What's the challenge?",
+    "titleLabel": "Title",
+    "titlePlaceholder": "No sugar for 30 days",
+    "typeLabel": "Type",
+    "typeBinary": "Yes / no — one rule",
+    "typeChecklist": "Checklist — several rules",
+    "typeNumeric": "Number — e.g. steps, minutes",
+    "rulePlaceholder": "Rule {{n}}",
+    "addRule": "+ add rule",
+    "dailyTarget": "Daily target",
+    "unit": "Unit",
+    "betterIs": "Better is",
+    "directionHigher": "higher (at least the target)",
+    "directionLower": "lower (at most the target)",
+    "stepWhen": "When?",
+    "startDate": "Start date",
+    "days": "Days",
+    "dawnLabel": "Dawn — when each day's battle happens (next morning)",
+    "difficulty": "Difficulty",
+    "diff_very_easy": "Very easy",
+    "diff_easy": "Easy",
+    "diff_normal": "Normal",
+    "diff_hard": "Hard",
+    "enemyHorde": "Enemy horde",
+    "restDays": "Rest / pause days (optional — skipped)",
+    "addRestDay": "+ Add",
+    "timeZoneHint": "Time zone: {{tz}}. You can report each day until Dawn the next morning.",
+    "chooseHero": "Choose your hero",
+    "botTeammates": "Bot teammates: {{count}}",
+    "submit": "⚔ Raise the banners",
+    "presets": {
+      "noSugarTitle": "No sugar",
+      "noSugarRule1": "No added sugar today",
+      "stepsTitle": "8,000 steps",
+      "stepsUnit": "steps",
+      "cleanTitle": "Clean living",
+      "cleanRule1": "No sugar",
+      "cleanRule2": "No alcohol",
+      "cleanRule3": "In bed by 23:00",
+      "screenTitle": "Less screen time",
+      "screenUnit": "min"
+    }
+  },
+  "lobby": {
+    "gathering": "Gathering the defenders",
+    "beginsIn": "The siege begins in <bold>{{duration}}</bold> ({{startDate}}) and lasts {{days}} days.",
+    "inviteFriends": "Invite friends — they can join until the start:",
+    "shareText": "Join my challenge \"{{title}}\"",
+    "linkCopied": "Link copied",
+    "shareInviteLink": "Share invite link",
+    "startNowDemo": "⏩ Start now (demo)",
+    "defenders": "Defenders"
+  },
+  "hud": {
+    "seasonComplete": "Season complete",
+    "dayStatus": "Day {{day}} of {{total}} · Dawn in {{duration}}",
+    "simMismatch": "⚠ This challenge uses game rules v{{challengeVer}}, this app runs v{{appVer}}. Battles may differ from your teammates' — please update the app.",
+    "desyncWarning": "⚠ Out of sync with teammates since day {{day}}. Please update the app.",
+    "watchDawn": "☀ Watch Dawn {{day}}",
+    "report": "✔ Report",
+    "plan": "⚒ Plan",
+    "scout": "👁 Scout",
+    "backToPlots": "Back to my plots",
+    "ownersPlot": "{{name}}'s plot",
+    "reportedToast": "Reported — thank you, defender!",
+    "inviteCopiedToast": "Invite code {{code}} copied"
+  },
+  "replay": {
+    "dawnBanner": "Dawn {{day}}",
+    "skip": "Skip ⏭",
+    "hordeDefeated": "⚔ Horde defeated",
+    "sunrise": "☀ Sunrise",
+    "subCleared": "every enemy fell or got through",
+    "subRetreat": "the surviving enemies retreat",
+    "subUntilSunrise": "until sunrise — then surviving enemies retreat"
+  },
+  "menu": {
+    "title": "Menu",
+    "howToPlay": "📖 How to play",
+    "replayDawn": "↻ Replay Dawn {{day}}",
+    "lastReport": "📜 Last report",
+    "inviteCode": "✉ Invite code: {{code}}",
+    "skipToNextDawn": "⏩ Skip to next Dawn (demo)",
+    "restartDryRun": "↻ Restart dry run",
+    "settings": "⚙ Settings",
+    "goldAfterPlans": "Your gold after plans:"
+  },
+  "coach": {
+    "collapsedTitle": "🎯 Dry Run Guide {{status}}",
+    "statusDawnReady": "· Dawn {{day}} ready",
+    "statusDayOf": "· Day {{day}} of {{total}}",
+    "statusComplete": "· Complete",
+    "show": "Show ▾",
+    "hide": "Hide ▴",
+    "guide": "📖 Guide",
+    "dawnArrivedTitle": "☀ Step 4 · Dawn {{day}} has arrived!",
+    "dawnArrivedBody": "All reports and plans have locked in, gold was paid, towers were built, and the battle was fought. Tap <bold>☀ Watch Dawn {{day}}</bold> at the bottom to watch the replay!",
+    "completeTitle": "🎉 Dry Run Complete!",
+    "completeBody": "You completed all 3 days and faced the Boss! In a real challenge, each day stays open until the next morning's Dawn ({{dawnTime}}).",
+    "restartDryRun": "↻ Restart dry run",
+    "startRealChallenge": "⚔ Start real challenge",
+    "headerDay": "🎯 Dry Run · Day {{day}} of {{total}}",
+    "chipScout": "{{prefix}} Scout",
+    "chipReport": "{{prefix}} Report",
+    "chipBuildPlan": "{{prefix}} Build & Plan",
+    "chipSkipDawn": "⏩ Skip to Dawn {{day}}",
+    "hintScoutDay1": "<bold>Step 1 · Scout:</bold> Tap <bold>👁 Scout</bold> (or a red road arrow) to see which roads the horde will attack tonight and what enemy types are marching.",
+    "hintScoutDay2": "<bold>Day 2 · Tougher foes:</bold> New enemy types unlock as the season progresses. Tap <bold>👁 Scout</bold> to inspect tonight's roads!",
+    "hintScoutDay3": "<bold>Day 3 · Boss Night!</bold> On the final night (and every 7th day), <bold>{{bossName}}</bold> marches. Tap <bold>👁 Scout</bold> to find the Boss road!",
+    "hintReportDay1": "<bold>Step 2 · Report your habit:</bold> Tap <bold>✔ Report</bold> to log today's checklist. Hitting your target earns full gold (+72g) and +2 Hero XP; even an honest partial/missed report still earns gold and triggers the <bold>Team Rally</bold> (+15% tower speed)!",
+    "hintReportOther": "<bold>Step 2 · Report for Day {{day}}:</bold> Tap <bold>✔ Report</bold>. (Tip: try checking only 1 or 2 boxes to see how partial reports still pay gold, or check all 3 for full gold!)",
+    "hintOrdersDay1": "<bold>Step 3 · Build towers ({{gold}}g available):</bold> Tap a gold <bold>＋</bold> on your plots to build towers (try an <bold>Archer Tower</bold> and a <bold>Barracks</bold>). <bold>⚒ Plan</bold> lists all your plots (build, upgrade, repair) and sets your Hero's stance.",
+    "hintOrdersDay2": "<bold>Step 3 · Upgrade & share ({{gold}}g available):</bold> Tap a tower with a green <bold>⬆</bold> (or use <bold>⚒ Plan → Your plots</bold>) to <bold>Upgrade</bold> it to Level 2, build a <bold>Mage Tower</bold> against armoured enemies, or donate gold to the <bold>Keep</bold> in <bold>⚒ Plan</bold>.",
+    "hintOrdersDay3": "<bold>Step 3 · Boss Night prep ({{gold}}g available):</bold> Build/upgrade towers and open <bold>⚒ Plan</bold> to send your <bold>Hero</bold> to reinforce the road the Boss is attacking!",
+    "hintReady": "<bold>Step 4 · Ready for Dawn {{day}}!</bold> In a real challenge, you'd now wait until tomorrow morning ({{dawnTime}}). In this dry run, tap <bold>⏩ Skip to Dawn {{day}}</bold> below!"
+  },
+  "checkin": {
+    "title": "Check in",
+    "dayButton": "Day {{day}}{{check}}",
+    "dayDateHint": "Day {{day}} · {{date}} — editable until Dawn.",
+    "allKept": "All kept",
+    "howMuchLower": "How much? (target: at most {{target}} {{unit}})",
+    "howMuchHigher": "How much? (target: {{target}} {{unit}})",
+    "statusInspired": "🔥 Inspired!",
+    "statusTarget": "✔ Target reached",
+    "statusHonest": "Honest report — still pays",
+    "honestyHint": "Honesty pays: a missed day still earns {{minGold}}+ gold. Not reporting earns nothing and your hero stays home.",
+    "submit": "Report"
+  },
+  "build": {
+    "buildingHeader": "{{name}} · Level {{level}}",
+    "ruins": "Ruins",
+    "emptyPlot": "Empty plot",
+    "barracksLine": "{{soldiers}} soldiers · {{hp}} HP each",
+    "towerLine": "{{dmg}} dmg · range {{range}}",
+    "hpStat": "HP {{hp}}/{{maxHp}}",
+    "upgradeTo": "Upgrade to level {{level}}",
+    "repair": "Repair",
+    "repairDesc": "Restore full health before Dawn.",
+    "fullyUpgraded": "Fully upgraded and in top shape.",
+    "undoPlotPlans": "↺ Undo today's plans for this plot"
+  },
+  "plan": {
+    "title": "Plans for Dawn",
+    "subtitle": "Tap your glowing plots on the map to build. Plans can be changed until Dawn.",
+    "noPlans": "No plans yet.",
+    "yourPlots": "Your plots",
+    "yourPlotsHint": "Build on free plots, upgrade towers (stronger, longer range, more HP) or repair damage.",
+    "buildingLv": "{{name}} · Lv {{level}}",
+    "freePlot": "Free plot",
+    "plotIndex": " · plot {{n}}",
+    "buildButton": "Build",
+    "showOnMap": "Show on map",
+    "yourHero": "Your hero",
+    "heroStats": "Lv {{level}} · {{hp}} HP base",
+    "statusTonight": "Status tonight: {{status}}",
+    "heroStatus": {
+      "absent": "stays home (no report yet)",
+      "weary": "weary",
+      "normal": "ready",
+      "inspired": "inspired"
+    },
+    "stanceOwn": "Defend my own sector",
+    "stanceKeep": "Defend the Keep",
+    "stanceReinforce": "Reinforce {{name}} ({{sector}})",
+    "stanceHelp": {
+      "own": "Your hero guards the rally point of your first sector and fights enemies walking past.",
+      "keep": "Last line of defence: your hero stands at the Keep and engages anything that reaches the end of any road (wider reach than usual).",
+      "neighbor": "Your hero fights in a teammate's sector instead of your own — useful when their road faces a heavy wave or the Boss."
+    },
+    "shareGold": "Share gold",
+    "keepProgress": "Keep level {{level}} · fund {{fund}} / {{nextFund}} for the next level (more HP, stronger keep archers)",
+    "keepMax": "Keep level {{level}} · fund {{fund}} (max level)",
+    "theKeep": "The Keep",
+    "give": "Give",
+    "orders": {
+      "build": "Build {{name}}",
+      "upgrade": "Upgrade building",
+      "repair": "Repair building",
+      "donateKeep": "Donate {{amount}} gold to the Keep",
+      "donatePlayer": "Give {{amount}} gold to {{name}}",
+      "stanceOwn": "Hero defends own sector",
+      "stanceKeep": "Hero defends the Keep",
+      "stanceNeighbor": "Hero reinforces {{sector}}"
+    }
+  },
+  "intent": {
+    "title": "Scout report · Dawn {{day}}",
+    "seasonOver": "The season is over.",
+    "bossBanner": "<bold>Boss night!</bold> {{bossName}} marches. Slay the boss for a bonus star and +{{gold}} gold each.",
+    "bestiaryTitle": "Bestiary ({{themeName}})",
+    "bossHp": "huge",
+    "enemyHp": "{{hp}} HP"
+  },
+  "report": {
+    "titleFell": "The Keep has fallen…",
+    "titleFlawless": "Flawless defence!",
+    "titleHeld": "The line held",
+    "dawnLabel": "Dawn {{day}}",
+    "keepSummary": "Keep {{before}} → {{after}}",
+    "leaks_one": "{{count}} got through",
+    "leaks_other": "{{count}} got through",
+    "bossSlain": "⚔ {{bossName}} was slain! Bonus star and +{{gold}} gold each.",
+    "rally": "Rally! Everyone reported — towers fired faster.",
+    "keepRebuildHint": "It will be rebuilt at half strength. Regroup and repair!",
+    "yourReport": "Your report",
+    "reportNone": "none — hero stayed home",
+    "reportTarget": "target reached",
+    "reportMiss": "honest miss",
+    "goldEarned": "Gold earned",
+    "combatStats": "Your damage · kills · blocks",
+    "notCarriedOut": "Not carried out: {{items}}",
+    "sunriseRetreat": "☀ At sunrise these enemies retreated (no harm done, but no kill either): {{enemies}}",
+    "escapedSingle": "{{name}} ({{hp}}% HP)",
+    "escapedMultiple": "{{count}}× {{name}}",
+    "heroesOfNight": "Heroes of the night",
+    "mvpDamage": "🏹 Top damage:",
+    "mvpWall": "🛡 The Wall:",
+    "mvpPatron": "💰 Patron:",
+    "seasonComplete": "Season complete!",
+    "rankSummary": "Rank: <bold>{{rank}}</bold> · {{pct}} % of stars",
+    "ranks": {
+      "bronze": "Bronze",
+      "silver": "Silver",
+      "gold": "Gold",
+      "legendary": "Legendary"
+    },
+    "watchAgain": "↻ Watch again",
+    "onward": "Onward"
+  },
+  "tutorial": {
+    "title": "How to Play",
+    "intro": "<bold>The Siege</bold> is a cooperative habit challenge and base-defence game for <bold>2–8 players</bold> over <bold>7–90 days</bold>. Each player guards a sector of the valley; your real-life daily habit reports earn gold and send your hero into battle before the enemy horde attacks at <bold>Dawn</bold>.",
+    "tabs": {
+      "timeline": "⏳ When to do what",
+      "daily": "✔ Daily loop",
+      "defenders": "🏰 Towers & heroes",
+      "enemies": "👾 Enemies & stars"
+    },
+    "timeline": {
+      "s1Title": "1. Before Day 1 · Gather the Defenders (Lobby)",
+      "s1Bullet1": "• <bold>One player creates the challenge:</bold> choose a habit type (<i>Yes/No</i>, <i>Checklist</i>, or <i>Numeric</i> target), start date, length (7–90 active days), difficulty, and <bold>Dawn time</bold> (default 11:00).",
+      "s1Bullet2": "• <bold>Share the 6-character invite code:</bold> friends join before the start date and pick their <bold>Hero Class</bold>. Once Day 1 opens, the team roster locks and roads/sectors are assigned.",
+      "s2Title": "2. Every Day & Evening · Report & Plan (00:00 → Dawn next morning)",
+      "s2Intro": "Each active day stays open from <bold>00:00</bold> on that calendar day until <bold>Dawn the next morning</bold> (e.g. 11:00 the following day — so you can report in the evening or over breakfast the next morning):",
+      "s2Scout": "• <bold>👁 Scout:</bold> Check which roads tonight's wave will march down and what special enemy role is featured.",
+      "s2Report": "• <bold>✔ Report:</bold> Log whether you kept your habit for the day. Reporting earns gold, levels up your hero, and sends them to fight tonight.",
+      "s2Plan": "• <bold>⚒ Plan & Build:</bold> Tap your <bold>glowing plots</bold> on the map to build, upgrade, or repair towers, set your hero's stance, or share gold. <i>Everything can be edited freely until Dawn!</i>",
+      "s3Title": "3. At Dawn (Next Morning) · The Nightly Assault",
+      "s3StepsIntro": "When Dawn arrives, the day closes and resolves automatically in 4 steps:",
+      "s3StepsFlow": "<bold>1. Economy</bold> (gold & XP paid, Rally checked) → <bold>2. Orders</bold> (towers built/upgraded, gold shared) → <bold>3. Battle</bold> (enemies march toward the Keep) → <bold>4. Dawn Report</bold> (0–3 ★ stars & MVPs).",
+      "s3Watch": "• Open the app anytime after Dawn and tap <bold>☀ Watch Dawn</bold> to watch the battle replay and start planning for the new day."
+    },
+    "daily": {
+      "s1Title": "✔ Step 1: Report Your Habit (Honesty Always Pays!)",
+      "s1Intro": "Your daily report determines your gold, Hero XP, and Hero status for tonight's battle:",
+      "inspired": "🔥 <bold>Inspired (150%+ numeric target):</bold> Base <bold>{{gold}}g</bold> · <bold>+{{xp}} XP</bold> · Hero gets <bold>+20% HP & damage</bold> tonight.",
+      "target": "✅ <bold>Target Reached (100%):</bold> Base <bold>{{gold}}g</bold> · <bold>+{{xp}} XP</bold> · Hero fights at full strength.",
+      "miss": "🤝 <bold>Honest Miss (under 100%):</bold> Base <bold>{{minGold}}–{{maxGold}}g</bold> · <bold>+{{xp}} XP</bold> · Hero still fights (<i>Weary</i>, −20% dmg). <bold>Reporting a miss is always much better than silence!</bold>",
+      "none": "💤 <bold>No Report Submitted:</bold> <bold>0g</bold> · <bold>0 XP</bold> · Hero <bold>stays home</bold>. After {{dormantAfter}} missed reports in a row, your player is marked <i>Dormant</i> until you report again.",
+      "rally": "<bold>Team Rally:</bold> Whenever <bold>every</bold> player submits a report (even an honest miss!), a Rally banner flies on the Keep and <bold>all towers fire +15% faster</bold> tonight.",
+      "s2Title": "⚒ Step 2: Build Towers, Position Your Hero & Share Gold",
+      "s2Plots": "• <bold>Tap your glowing plots</bold> (gold <bold>＋</bold> markers) on the valley map to <bold>Build</bold> a Level 1 tower. <bold>Tap a tower you own</bold> to <bold>Upgrade</bold> it (Level 1 → 2 → 3) or <bold>Repair</bold> battle damage — a green <bold>⬆</bold> shows when you can afford an upgrade. <bold>⚒ Plan → Your plots</bold> lists all of them. Every plot reaches the same length of road. Tap <bold>📍</bold> to jump back to your plots.",
+      "s2Hero": "• <bold>Open ⚒ Plan</bold> to choose where your <bold>Hero</bold> fights tonight: defend your own sector, guard the Keep (last line of defence at the end of every road), or <bold>reinforce a teammate's road</bold> that faces a heavy wave or Boss!",
+      "s2Share": "• <bold>Share Gold:</bold> In <bold>⚒ Plan</bold>, you can send gold (min {{minDonate}}g) to a teammate who needs a key tower, or donate to the <bold>Keep Fund</bold> ({{fund2}}g → Lv 2, {{fund3}}g → Lv 3 for higher Keep HP and stronger Keep archers)."
+    },
+    "defenders": {
+      "towersHeading": "Towers (Lv 1 → Lv 3)",
+      "towersNote": "Towers have {{hpList}} HP (Lv 1/2/3). Siege enemies can damage them; if a tower hits 0 HP it turns into Ruins and must be rebuilt.",
+      "archerRole": "Fast single-target physical arrows · hits ground & flying",
+      "archerDetails": "{{dmg}} dmg · range {{range}} · {{rate}} shot/s",
+      "barracksRole": "Trains footmen who block and fight ground enemies on the road",
+      "barracksDetails": "{{soldiers}} soldiers · {{hp}} HP · {{dmg}} dmg/s (respawn {{respawn}}s)",
+      "mageRole": "Magic bolts that ignore armour · hits ground & flying",
+      "mageDetails": "{{dmg}} dmg · range {{range}} · {{rate}} shot/s",
+      "catapultRole": "Slow, heavy splash damage vs ground clusters · cannot hit flyers",
+      "catapultDetails": "{{dmg}} splash dmg · range {{range}} · {{rate}} shot/s",
+      "heroesHeading": "Hero Classes (Lv 1 → Lv 5)",
+      "heroesNote": "Heroes gain +12% HP & damage per level and respawn 10s after falling in battle — as long as you reported today!",
+      "heroStatLine": "{{hp}} HP · {{dmg}} dmg"
+    },
+    "enemies": {
+      "heading": "{{themeName}} & Counters",
+      "bossNight": "Boss night",
+      "enemyStats": "{{hp}} HP · leak −{{leak}} Keep HP",
+      "starsHeading": "Stars, Boss Nights & Keep Recovery",
+      "starsLine": "• <bold>★★★:</bold> 0 leaks · <bold>★★:</bold> Keep lost ≤10% HP · <bold>★:</bold> Keep survived · <bold>0 ★:</bold> Keep fell.",
+      "noGameOver": "• <bold>No Game Over:</bold> If the Keep falls, it is rebuilt at <bold>50% HP</bold> the next morning (and heals +5 HP each day).",
+      "bossNights": "• <bold>Boss Nights:</bold> Every 7th active day (in 14+ day seasons) and on the <bold>final night</bold>. Slaying the Boss grants <bold>+1 Bonus Star</bold> and <bold>+{{gold}} gold</bold> to every defender!"
+    },
+    "dryRunCard": {
+      "title": "🎯 Interactive Dry Run (3-Day Practice)",
+      "desc": "Practice scouting, reporting, building towers, and skipping to Dawn across a guided 3-day mini-season with two bot teammates (<bold>Brin</bold> & <bold>Mara</bold>) — culminating in a Day 3 Boss fight!",
+      "start": "⚔ Start 3-Day Dry Run"
+    }
+  },
+  "canvas": {
+    "keepLevel": "Keep Level {{level}}!",
+    "rally": "RALLY +{{pct}}%",
+    "resting": "{{name}} (resting)",
+    "waveCount": "×{{total}}",
+    "waveBoss": "×{{total}} + BOSS"
+  },
+  "heroes": {
+    "knight": {
+      "name": "Knight",
+      "text": "Tough melee tank. Blocks two enemies at once."
+    },
+    "ranger": {
+      "name": "Ranger",
+      "text": "Long-range archer. Shoots flyers."
+    },
+    "priest": {
+      "name": "Priestess",
+      "text": "Holy magic that ignores armour and heals nearby allies."
+    }
+  },
+  "buildings": {
+    "archer": {
+      "name": "Archer Tower",
+      "text": "Fast arrows. Hits flyers."
+    },
+    "barracks": {
+      "name": "Barracks",
+      "text": "Soldiers block the road."
+    },
+    "mage": {
+      "name": "Mage Tower",
+      "text": "Magic bolts pierce armour."
+    },
+    "catapult": {
+      "name": "Catapult",
+      "text": "Slow, heavy splash. Ground only."
+    }
+  },
+  "roads": {
+    "N": "North-west road",
+    "E": "North-east road",
+    "S": "South-east road",
+    "W": "South-west road",
+    "ring": {
+      "outer": "outer",
+      "inner": "inner"
+    }
+  },
+  "themes": {
+    "roleTips": {
+      "grunt": "Basic foot soldier.",
+      "runner": "Fast! Archers and soldiers catch them.",
+      "brute": "Armoured — arrows barely scratch it. Use mages.",
+      "flyer": "Flies over soldiers. Only archers, mages, rangers and priestesses hit it.",
+      "siege": "Smashes buildings in passing. Kill it fast; repair afterwards.",
+      "boss": "Boss. Huge health, speeds up nearby enemies."
+    },
+    "sugar": {
+      "name": "The Sugar Horde",
+      "bossName": "The Sugar Wraith",
+      "roles": {
+        "grunt": { "name": "Gummy Grunt", "plural": "Gummy Grunts" },
+        "runner": { "name": "Candy Imp", "plural": "Candy Imps" },
+        "brute": { "name": "Choco Brute", "plural": "Choco Brutes" },
+        "flyer": { "name": "Floss Bat", "plural": "Floss Bats" },
+        "siege": { "name": "Cake Golem", "plural": "Cake Golems" },
+        "boss": { "name": "The Sugar Wraith", "plural": "The Sugar Wraith" }
+      }
+    },
+    "sloth": {
+      "name": "The Sloth Mire",
+      "bossName": "The Moss Colossus",
+      "roles": {
+        "grunt": { "name": "Snooze Creep", "plural": "Snooze Creeps" },
+        "runner": { "name": "Pillow Sprite", "plural": "Pillow Sprites" },
+        "brute": { "name": "Couch Troll", "plural": "Couch Trolls" },
+        "flyer": { "name": "Dream Moth", "plural": "Dream Moths" },
+        "siege": { "name": "Peat Hulk", "plural": "Peat Hulks" },
+        "boss": { "name": "The Moss Colossus", "plural": "The Moss Colossus" }
+      }
+    },
+    "doom": {
+      "name": "The Doomscroll Swarm",
+      "bossName": "The Endless Feed",
+      "roles": {
+        "grunt": { "name": "Screen Walker", "plural": "Screen Walkers" },
+        "runner": { "name": "Ping Gremlin", "plural": "Ping Gremlins" },
+        "brute": { "name": "Static Golem", "plural": "Static Golems" },
+        "flyer": { "name": "Glitch Eye", "plural": "Glitch Eyes" },
+        "siege": { "name": "Tower Monolith", "plural": "Tower Monoliths" },
+        "boss": { "name": "The Endless Feed", "plural": "The Endless Feed" }
+      }
+    },
+    "ember": {
+      "name": "The Ember Host",
+      "bossName": "The Cinder Sovereign",
+      "roles": {
+        "grunt": { "name": "Ash Imp", "plural": "Ash Imps" },
+        "runner": { "name": "Spark Hound", "plural": "Spark Hounds" },
+        "brute": { "name": "Basalt Brute", "plural": "Basalt Brutes" },
+        "flyer": { "name": "Cinder Drake", "plural": "Cinder Drakes" },
+        "siege": { "name": "Magma Ram", "plural": "Magma Rams" },
+        "boss": { "name": "The Cinder Sovereign", "plural": "The Cinder Sovereign" }
+      }
+    }
+  },
+  "dryRun": {
+    "defaultTitle": "Dry Run: Hold the Valley",
+    "rule1": "Drink a glass of water",
+    "rule2": "Take 5 deep breaths",
+    "rule3": "Stretch for 2 minutes"
+  },
+  "errors": {
+    "network_offline": "Network error — are you offline?",
+    "database_error": "Database error.",
+    "missing_token": "Please sign in first.",
+    "invalid_token": "Session invalid — please register again.",
+    "not_registered": "Not registered.",
+    "invalid_name": "Name must be {{min}}–{{max}} characters.",
+    "invalid_transfer_code": "Code invalid or expired.",
+    "transfer_needs_server": "Device transfer needs the server (offline demo mode).",
+    "invites_need_server": "Invites need the server (offline demo mode).",
+    "invalid_title": "Title must be {{min}}–{{max}} characters.",
+    "rules_missing": "Rules are missing.",
+    "invalid_rule_text": "Invalid rule text.",
+    "invalid_target": "Target must be greater than 0.",
+    "invalid_direction": "Direction must be higher or lower.",
+    "invalid_type_rules": "Invalid challenge type or rules.",
+    "invalid_difficulty": "Invalid difficulty.",
+    "invalid_theme": "Invalid enemy horde.",
+    "invalid_calendar": "Invalid schedule settings.",
+    "invalid_days": "Duration must be {{min}}–{{max}} days.",
+    "too_many_inactive_dates": "Too many rest days.",
+    "start_date_past": "Start date is in the past.",
+    "challenge_not_found": "Challenge not found.",
+    "invalid_hero_class": "Invalid hero class.",
+    "invite_not_found": "Invite code not found.",
+    "season_already_started": "The season has already started.",
+    "challenge_full": "This challenge is full.",
+    "invalid_event_kind": "Invalid action type.",
+    "payload_too_large": "Submission is too large.",
+    "invalid_day": "Invalid day.",
+    "day_not_resolved": "This day has not resolved yet.",
+    "day_not_started": "This day has not started yet.",
+    "day_closed": "This day is closed — Dawn has passed.",
+    "push_disabled": "Push notifications are disabled on the server.",
+    "invalid_endpoint": "Invalid push endpoint.",
+    "queued_write_dropped": "Your {{kindLabel}} for day {{day}} could not be saved: {{reason}}",
+    "eventKind_checkin": "report",
+    "eventKind_orders": "plan",
+    "eventKind_hash": "sync check"
+  },
+  "skipReasons": {
+    "unknown_pad": "unknown plot",
+    "not_your_pad": "not your plot",
+    "pad_occupied": "plot occupied",
+    "unknown_building": "unknown building",
+    "not_enough_gold": "not enough gold",
+    "nothing_to_upgrade": "nothing to upgrade",
+    "max_level": "max level",
+    "nothing_to_repair": "nothing to repair",
+    "not_damaged": "not damaged",
+    "minimum_donate": "minimum {{min}} gold",
+    "unknown_player": "unknown player",
+    "unknown_sector": "unknown sector",
+    "unknown_stance": "unknown stance",
+    "unknown_order": "unknown order"
+  },
+  "push": {
+    "iosAddHomeScreen": "On iPhone, first add the app to your home screen (Share → Add to Home Screen), then enable notifications there.",
+    "notSupported": "Notifications are not supported in this browser.",
+    "needsServer": "Notifications need the server.",
+    "permissionDenied": "Notification permission was not granted."
+  }
+}

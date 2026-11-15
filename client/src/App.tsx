@@ -1,4 +1,5 @@
 import { Suspense, createContext, lazy, useCallback, useContext, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { getBackend } from './net';
 import type { Backend, User } from './net/types';
 import { ChallengeScreen } from './ui/ChallengeScreen';
@@ -41,6 +42,7 @@ function usePath(): [string, (p: string) => void] {
 }
 
 export function App() {
+  const { t } = useTranslation();
   const [path, navigate] = usePath();
   const [backend, setBackend] = useState<Backend | null>(null);
   const [user, setUser] = useState<User | null | undefined>(undefined);
@@ -66,16 +68,16 @@ export function App() {
     ) : path.startsWith('/dev/vfx') ? (
       <VfxDemo />
     ) : (
-      <div className="screen selectable">Unknown dev tool. Try /dev/sandbox, /dev/map-editor, /dev/gallery or /dev/vfx.</div>
+      <div className="screen selectable">{t('app.unknownDevTool')}</div>
     );
-    return <Suspense fallback={<div className="screen muted">Loading…</div>}>{tool}</Suspense>;
+    return <Suspense fallback={<div className="screen muted">{t('app.loading')}</div>}>{tool}</Suspense>;
   }
   if (fatal) return <div className="screen error">{fatal}</div>;
   if (!backend || user === undefined)
     return (
       <div className="screen bg-art center" style={{ paddingTop: '40vh' }}>
-        <h1>The Siege</h1>
-        <div className="muted">Loading…</div>
+        <h1>{t('app.title')}</h1>
+        <div className="muted">{t('app.loading')}</div>
       </div>
     );
 

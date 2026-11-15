@@ -3,6 +3,7 @@ import { Application, Container, Graphics, Sprite, Text } from 'pixi.js';
 import { Viewport } from 'pixi-viewport';
 import { enemyArtId } from '../content/artSpec';
 import { BUILDING_HP, ECON, TICK_RATE } from '../content/stats';
+import i18n from '../i18n';
 import { Battle, type BattleEvent, type EntityId, type ProjectileKind } from '../sim/battle';
 import { makePath, pointAt } from '../sim/map';
 import type { BattleSetup, Dir, Intent, KeepState, MapDef, PadId, PadState, PlayerId } from '../sim/types';
@@ -208,7 +209,7 @@ export class GameView {
       this.keepPop = 1;
       this.vfx.burst(map.keep.x, map.keep.y - 60, 0xffd24a, 24, 24);
       this.vfx.coinBurst(map.keep.x, map.keep.y - 40);
-      this.vfx.floatingText(map.keep.x, this.keepTopY - 20, `Keep Level ${keep.level}!`, 0xffe48a, 24);
+      this.vfx.floatingText(map.keep.x, this.keepTopY - 20, i18n.t('canvas.keepLevel', { level: keep.level }), 0xffe48a, 24);
       sound.play('victory');
     }
     this.lastKeepLevel = keep.level;
@@ -249,20 +250,21 @@ export class GameView {
 
   private addRallyBanner(x: number, y: number) {
     const c = new Container();
+    const rallyPct = Math.round((ECON.rallyFireRate - 1) * 100);
+    const t = new Text({ text: i18n.t('canvas.rally', { pct: rallyPct }), style: { fontSize: 13, fontWeight: '900', fill: 0xffe48a, stroke: { color: 0x1a0f08, width: 3 } } });
+    t.anchor.set(0.5);
+    const pillW = Math.max(124, Math.ceil(t.width) + 46);
     const bg = new Graphics();
-    bg.roundRect(-62, -16, 124, 28, 14).fill({ color: 0x2a1808, alpha: 0.85 }).stroke({ width: 2, color: 0xffd24a });
+    bg.roundRect(-pillW / 2, -16, pillW, 28, 14).fill({ color: 0x2a1808, alpha: 0.85 }).stroke({ width: 2, color: 0xffd24a });
     c.addChild(bg);
     if (this.assets.has('icon_rally')) {
       const a = this.assets.get('icon_rally');
       const sp = new Sprite(a.texture);
       sp.anchor.set(0.5);
       sp.scale.set(22 / a.texture.height);
-      sp.position.set(-44, -2);
+      sp.position.set(-pillW / 2 + 18, -2);
       c.addChild(sp);
     }
-    const rallyPct = Math.round((ECON.rallyFireRate - 1) * 100);
-    const t = new Text({ text: `RALLY +${rallyPct}%`, style: { fontSize: 13, fontWeight: '900', fill: 0xffe48a, stroke: { color: 0x1a0f08, width: 3 } } });
-    t.anchor.set(0.5);
     t.position.set(10, -2);
     c.addChild(t);
     c.position.set(x, y);
@@ -290,7 +292,7 @@ export class GameView {
     s.tint = color;
     if (dormant) s.alpha = 0.65;
     c.addChild(s);
-    const label = dormant ? `${name} (resting)` : name;
+    const label = dormant ? i18n.t('canvas.resting', { name }) : name;
     const t = new Text({ text: label, style: { fontSize: 13, fontWeight: '900', fill: mine ? 0xffe28a : dormant ? 0xc8c0b0 : 0xffffff, stroke: { color: 0x1a0f08, width: 4 } } });
     t.anchor.set(0.5, 0);
     t.y = 2;
@@ -348,7 +350,8 @@ export class GameView {
       sp.position.set(at.x, at.y);
       c.addChild(sp);
       const total = Object.values(ri.counts).reduce((a, b) => a + (b ?? 0), 0);
-      const label = new Text({ text: `×${total}${ri.boss ? ' + BOSS' : ''}`, style: { fontSize: 22, fontWeight: '900', fill: 0xffe0d0, stroke: { color: 0x3a0505, width: 5 } } });
+      const labelText = ri.boss ? i18n.t('canvas.waveBoss', { total }) : i18n.t('canvas.waveCount', { total });
+      const label = new Text({ text: labelText, style: { fontSize: 22, fontWeight: '900', fill: 0xffe0d0, stroke: { color: 0x3a0505, width: 5 } } });
       label.anchor.set(0.5, 0);
       label.position.set(at.x, at.y + 6);
       c.addChild(label);

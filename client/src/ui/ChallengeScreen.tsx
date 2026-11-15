@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useApp } from '../App';
 import { BATTLE, ECON, SIM_VERSION, TICK_RATE } from '../content/stats';
+import { getTheme } from '../content/themes';
+import { formatDate, formatNumber } from '../i18n/format';
 import { DRY_RUN_ID } from '../net/types';
 import { GameCanvas } from '../render/GameCanvas';
 import type { GameView, ReplayPlayer } from '../render/GameView';
@@ -9,13 +12,14 @@ import { padById, sectorById } from '../sim/map';
 import { upgradeCost } from '../sim/orders';
 import type { Checkin, Order, PadId, PlayerId } from '../sim/types';
 import { useSeason, type SeasonView } from '../state/useSeason';
-import { Gold, Icon, PLAYER_COLORS, Sheet, Toast, cssColor, fmtDuration, portraitUrl, useNow } from './common';
+import { Gold, Icon, PLAYER_COLORS, RichText, Sheet, Toast, cssColor, fmtDuration, portraitUrl, useNow } from './common';
 import { BuildSheet, CheckInSheet, DawnReport, IntentSheet, PlanSheet, towerRange } from './sheets';
 import { TutorialContent } from './Tutorial';
 
 type SheetState = { kind: 'checkin' } | { kind: 'build'; pad: PadId } | { kind: 'plan' } | { kind: 'intent' } | { kind: 'report'; day: number } | { kind: 'menu' } | { kind: 'tutorial' } | null;
 
 export function ChallengeScreen({ id }: { id: string }) {
+  const { t, i18n } = useTranslation();
   const { backend, user, navigate } = useApp();
   const { view, error, putCheckin, putOrders, refresh, reload } = useSeason(backend, id, user.id);
   const gv = useRef<GameView | null>(null);
@@ -44,7 +48,7 @@ export function ChallengeScreen({ id }: { id: string }) {
     if (notice) setToast(notice);
   }, [backend, view]);
 
-  // show valley (preview incl. planned orders) & keep canvas handlers fresh
+  // show valley (preview incl. planned orders) & keep canvas handlers fresh (re-draws when language changes)
   useEffect(() => {
     const v = gv.current;
     if (!v || !ready || !view) return;
@@ -52,7 +56,7 @@ export function ChallengeScreen({ id }: { id: string }) {
       const owner = view.state.pads[pad]?.owner;
       if (replay) return;
       if (owner === user.id && view.planDay) setTimeout(() => setSheet({ kind: 'build', pad }), 0);
-      else if (owner) setToast(`${owners[owner]?.name ?? '?'}'s plot`);
+      else if (owner) setToast(t('hud.ownersPlot', { name: owners[owner]?.name ?? '?' }));
     };
     v.onIntentTap = () => {
       setTimeout(() => {
@@ -89,7 +93,7 @@ export function ChallengeScreen({ id }: { id: string }) {
       rally: view.preview?.rally ?? false,
       animate: true,
     });
-  }, [ready, view, replay, owners, user.id]);
+  }, [ready, view, replay, owners, user.id, i18n.language, t]);
 
   // range ring for the plot whose build sheet is open (empty plot: L1 archer reach)
   useEffect(() => {
@@ -159,7 +163,7 @@ export function ChallengeScreen({ id }: { id: string }) {
   const doCheckin = async (day: number, c: Checkin) => {
     await putCheckin(day, c);
     sound.play('coin');
-    setToast('Reported — thank you, defender!');
+    setToast(t('hud.reportedToast'));
   };
 
   const doOrders = (orders: Order[]) => {
@@ -178,7 +182,7 @@ export function ChallengeScreen({ id }: { id: string }) {
   if (!view)
     return (
       <div className="screen bg-art center" style={{ paddingTop: '40vh' }}>
-        Loading the valley…
+        {t('app.loadingValley')}
       </div>
     );
 
@@ -237,34 +241,44 @@ export function ChallengeScreen({ id }: { id: string }) {
       <div className="screen bg-art col">
         <div className="row">
           <button className="btn small" onClick={() => navigate('/')}>
-            ‹ Home
+            {t('common.home')}
           </button>
           <h2 className="grow selectable" style={{ margin: 0 }}>
             {setup.config.title}
           </h2>
         </div>
         <div className="panel col">
-          <h3>Gathering the defenders</h3>
+          <h3>{t('lobby.gathering')}</h3>
           <div className="selectable">
-            The siege begins in <b>{fmtDuration(clock.windows[0].open - now)}</b> ({setup.config.startDate}) and lasts {setup.config.days} days.
+            <RichText
+              i18nKey="lobby.beginsIn"
+              values={{
+                duration: fmtDuration(clock.windows[0].open - now),
+                startDate: formatDate(setup.config.startDate),
+                days: setup.config.days,
+              }}
+            />
           </div>
           {backend.mode === 'http' && !view.challenge.local && (
             <>
-              <div>Invite friends — they can join until the start:</div>
+              <div>{t('lobby.inviteFriends')}</div>
               <div className="title center selectable" style={{ fontSize: 28, letterSpacing: '0.15em' }}>
                 {view.challenge.inviteCode}
               </div>
               <button
                 className="btn gold block"
                 onClick={async () => {
-                  if (navigator.share) await navigator.share({ title: 'The Siege', text: `Join my challenge "${setup.config.title}"`, url: link }).catch(() => undefined);
+                  if (navigator.share)
+                    await navigator
+                      .share({ title: t('app.title'), text: t('lobby.shareText', { title: setup.config.title }), url: link })
+                      .catch(() => undefined);
                   else {
                     await navigator.clipboard.writeText(link);
-                    setToast('Link copied');
+                    setToast(t('lobby.linkCopied'));
                   }
                 }}
               >
-                Share invite link
+                {t('lobby.shareInviteLink')}
               </button>
             </>
           )}
@@ -276,15 +290,15 @@ export function ChallengeScreen({ id }: { id: string }) {
                 await refresh();
               }}
             >
-              ⏩ Start now (demo)
+              {t('lobby.startNowDemo')}
             </button>
           )}
-          <h3>Defenders</h3>
+          <h3>{t('lobby.defenders')}</h3>
           {view.challenge.members.map((m, i) => (
             <div key={m.userId} className="row selectable">
               <img src={portraitUrl(m.heroClass)} width={40} height={40} style={{ borderRadius: '50%', objectFit: 'cover', objectPosition: 'top', border: `3px solid ${cssColor(PLAYER_COLORS[i % 8])}` }} alt="" />
               <b>{m.name}</b>
-              {m.bot && <span className="muted">(bot)</span>}
+              {m.bot && <span className="muted">{t('common.bot')}</span>}
             </div>
           ))}
         </div>
@@ -313,20 +327,26 @@ export function ChallengeScreen({ id }: { id: string }) {
               {setup.config.title}
             </div>
             <div style={{ fontSize: 12, fontWeight: 700 }}>
-              {clock.finished ? 'Season complete' : `Day ${view.planDay} of ${setup.config.days} · Dawn in ${fmtDuration((nextDawn ?? now) - now)}`}
+              {clock.finished
+                ? t('hud.seasonComplete')
+                : t('hud.dayStatus', {
+                    day: view.planDay,
+                    total: setup.config.days,
+                    duration: fmtDuration((nextDawn ?? now) - now),
+                  })}
             </div>
           </div>
           <span className="chip">
             <Icon id="gold" size={18} />
-            {gold}
+            {formatNumber(gold)}
           </span>
           <span className="chip">
             <Icon id="heart" size={18} />
-            {Math.round(keep.hp)}
+            {formatNumber(Math.round(keep.hp))}
           </span>
           <span className="chip">
             <Icon id="star" size={18} />
-            {totalStars}
+            {formatNumber(totalStars)}
           </span>
         </div>
         <div className="team">
@@ -339,7 +359,7 @@ export function ChallengeScreen({ id }: { id: string }) {
                 <div key={m.userId} className={'avatar' + (done ? '' : ' dim')} style={{ '--c': cssColor(PLAYER_COLORS[i % 8]) } as React.CSSProperties} title={m.name}>
                   <img src={portraitUrl(m.heroClass)} alt="" />
                   {done && clock.open.length > 0 && <Icon id="check" size={18} style={{ position: 'absolute', right: -2, top: 26 }} />}
-                  <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.userId === me ? 'You' : m.name}</div>
+                  <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.userId === me ? t('common.you') : m.name}</div>
                 </div>
               );
             })}
@@ -367,17 +387,17 @@ export function ChallengeScreen({ id }: { id: string }) {
         )}
         {view.simVersionMismatch && (
           <div className="error" style={{ fontSize: 12 }}>
-            ⚠ This challenge uses game rules v{view.challenge.simVersion}, this app runs v{SIM_VERSION}. Battles may differ from your teammates' — please update the app.
+            {t('hud.simMismatch', { challengeVer: view.challenge.simVersion, appVer: SIM_VERSION })}
           </div>
         )}
-        {view.desyncDay && <div className="error" style={{ fontSize: 12 }}>⚠ Out of sync with teammates since day {view.desyncDay}. Please update the app.</div>}
+        {view.desyncDay && <div className="error" style={{ fontSize: 12 }}>{t('hud.desyncWarning', { day: view.desyncDay })}</div>}
         {error && <div className="error" style={{ fontSize: 12 }}>{error}</div>}
       </div>
 
       {replay ? (
         <>
           <div className="dawn-banner center">
-            Dawn {replay.day}
+            {t('replay.dawnBanner', { day: replay.day })}
             <ReplayClock player={replay.player} />
           </div>
           <div className="replay-bar">
@@ -394,7 +414,7 @@ export function ChallengeScreen({ id }: { id: string }) {
               </button>
             ))}
             <button className="btn small" onClick={() => replay.player.skip()}>
-              Skip ⏭
+              {t('replay.skip')}
             </button>
             <button className="btn small" onClick={endReplay}>
               ✕
@@ -404,21 +424,21 @@ export function ChallengeScreen({ id }: { id: string }) {
       ) : (
         <div className="hud-bottom">
           {unseenDawn ? (
-            <button className="btn gold" style={{ maxWidth: 280, animation: 'pulse 1.4s infinite' }} onClick={() => startReplay(unseenDawn)}>
-              ☀ Watch Dawn {unseenDawn}
+            <button className="btn gold" style={{ maxWidth: 340, animation: 'pulse 1.4s infinite' }} onClick={() => startReplay(unseenDawn)}>
+              {t('hud.watchDawn', { day: unseenDawn })}
             </button>
           ) : (
             <>
               <button className={'btn' + (missingCheckin ? ' gold' : '')} disabled={!clock.open.length} onClick={() => setSheet({ kind: 'checkin' })} style={{ position: 'relative' }}>
-                ✔ Report
+                {t('hud.report')}
                 {missingCheckin && <span className="badge-dot">!</span>}
               </button>
               <button className="btn" disabled={!view.planDay} onClick={() => setSheet({ kind: 'plan' })} style={{ position: 'relative' }}>
-                ⚒ Plan
+                {t('hud.plan')}
                 {view.myOrders.length > 0 && <span className="badge-dot" style={{ background: '#3a8a3a' }}>{view.myOrders.length}</span>}
               </button>
               <button className="btn" disabled={!view.state.intent} onClick={openScout}>
-                👁 Scout
+                {t('hud.scout')}
               </button>
               <button className="btn" onClick={() => setSheet({ kind: 'menu' })} style={{ maxWidth: 56 }}>
                 ☰
@@ -430,7 +450,8 @@ export function ChallengeScreen({ id }: { id: string }) {
 
       {sheet?.kind === 'checkin' && <CheckInSheet view={view} onSave={doCheckin} onClose={() => setSheet(null)} />}
       {sheet?.kind === 'build' && pv && <BuildSheet view={view} padId={sheet.pad} onOrders={doOrders} onClose={() => setSheet(null)} />}
-      {sheet?.kind === 'plan' && pv && <PlanSheet
+      {sheet?.kind === 'plan' && pv && (
+        <PlanSheet
           view={view}
           onOrders={doOrders}
           onOpenPad={(pad) => {
@@ -438,7 +459,8 @@ export function ChallengeScreen({ id }: { id: string }) {
             setSheet({ kind: 'build', pad });
           }}
           onClose={() => setSheet(null)}
-        />}
+        />
+      )}
       {sheet?.kind === 'intent' && <IntentSheet view={view} onClose={() => setSheet(null)} />}
       {sheet?.kind === 'report' && view.reports[sheet.day - 1] && (
         <DawnReport
@@ -454,18 +476,18 @@ export function ChallengeScreen({ id }: { id: string }) {
       {sheet?.kind === 'menu' && (
         <div className="sheet-backdrop" onClick={() => setSheet(null)}>
           <div className="sheet panel col" onClick={(e) => e.stopPropagation()}>
-            <h3>Menu</h3>
+            <h3>{t('menu.title')}</h3>
             <button className="btn block" onClick={() => setSheet({ kind: 'tutorial' })}>
-              📖 How to play
+              {t('menu.howToPlay')}
             </button>
             {resolved > 0 && (
               <button className="btn block" onClick={() => startReplay(resolved)}>
-                ↻ Replay Dawn {resolved}
+                {t('menu.replayDawn', { day: resolved })}
               </button>
             )}
             {resolved > 0 && (
               <button className="btn block" onClick={() => setSheet({ kind: 'report', day: resolved })}>
-                📜 Last report
+                {t('menu.lastReport')}
               </button>
             )}
             {backend.mode === 'http' && !view.challenge.local && (
@@ -474,11 +496,11 @@ export function ChallengeScreen({ id }: { id: string }) {
                 onClick={async () => {
                   const link = `${location.origin}/join/${view.challenge.inviteCode}`;
                   await navigator.clipboard?.writeText(link).catch(() => undefined);
-                  setToast(`Invite code ${view.challenge.inviteCode} copied`);
+                  setToast(t('hud.inviteCopiedToast', { code: view.challenge.inviteCode }));
                   setSheet(null);
                 }}
               >
-                ✉ Invite code: {view.challenge.inviteCode}
+                {t('menu.inviteCode', { code: view.challenge.inviteCode })}
               </button>
             )}
             {canSkipDawn && !clock.finished && (
@@ -490,26 +512,26 @@ export function ChallengeScreen({ id }: { id: string }) {
                   await refresh();
                 }}
               >
-                ⏩ Skip to next Dawn (demo)
+                {t('menu.skipToNextDawn')}
               </button>
             )}
             {isDryRun && (
               <button className="btn block" onClick={restartDryRun}>
-                ↻ Restart dry run
+                {t('menu.restartDryRun')}
               </button>
             )}
             <button className="btn block" onClick={() => navigate('/settings')}>
-              ⚙ Settings
+              {t('menu.settings')}
             </button>
             <div className="muted" style={{ fontSize: 12 }}>
-              Your gold after plans: <Gold n={gold} size={14} />
+              {t('menu.goldAfterPlans')} <Gold n={gold} size={14} />
             </div>
           </div>
         </div>
       )}
       {sheet?.kind === 'tutorial' && (
         <Sheet wide onClose={() => setSheet(null)}>
-          <h2>How to Play</h2>
+          <h2>{t('tutorial.title')}</h2>
           <TutorialContent
             inDryRun={isDryRun}
             onStartDryRun={async (hc) => {
@@ -522,7 +544,7 @@ export function ChallengeScreen({ id }: { id: string }) {
         </Sheet>
       )}
       {!sheet && (
-        <button className="btn small recenter" onClick={centerMyPlotsAndFollow} title="Back to my plots" aria-label="Back to my plots">
+        <button className="btn small recenter" onClick={centerMyPlotsAndFollow} title={t('hud.backToPlots')} aria-label={t('hud.backToPlots')}>
           📍
         </button>
       )}
@@ -533,6 +555,7 @@ export function ChallengeScreen({ id }: { id: string }) {
 
 /** battle clock during a replay: enemies still alive when it runs out retreat at sunrise */
 function ReplayClock({ player }: { player: ReplayPlayer }) {
+  const { t } = useTranslation();
   useNow(250, () => player.battle.tick);
   const left = Math.max(0, BATTLE.maxSeconds - player.battle.tick / TICK_RATE);
   const over = player.battle.done;
@@ -541,9 +564,9 @@ function ReplayClock({ player }: { player: ReplayPlayer }) {
   const s = Math.floor(left % 60);
   return (
     <div style={{ fontSize: 14, fontFamily: 'inherit', lineHeight: 1.2 }}>
-      {over ? (cleared ? '⚔ Horde defeated' : '☀ Sunrise') : `⏱ ${m}:${String(s).padStart(2, '0')}`}
+      {over ? (cleared ? t('replay.hordeDefeated') : t('replay.sunrise')) : `⏱ ${m}:${String(s).padStart(2, '0')}`}
       <div style={{ fontSize: 11, fontWeight: 700, fontFamily: 'system-ui, sans-serif' }}>
-        {over ? (cleared ? 'every enemy fell or got through' : 'the surviving enemies retreat') : 'until sunrise — then surviving enemies retreat'}
+        {over ? (cleared ? t('replay.subCleared') : t('replay.subRetreat')) : t('replay.subUntilSunrise')}
       </div>
     </div>
   );
@@ -580,6 +603,7 @@ function DryRunCoach({
   onNewChallenge: () => void;
   onTutorial: () => void;
 }) {
+  const { t } = useTranslation();
   const boxStyle: React.CSSProperties = {
     background: 'rgba(16, 22, 34, 0.92)',
     border: '1px solid rgba(244, 198, 78, 0.65)',
@@ -594,13 +618,18 @@ function DryRunCoach({
   };
 
   if (collapsed) {
+    const status = unseenDawn
+      ? t('coach.statusDawnReady', { day: unseenDawn })
+      : view.planDay
+        ? t('coach.statusDayOf', { day: view.planDay, total: view.setup.config.days })
+        : t('coach.statusComplete');
     return (
       <div style={boxStyle} className="row">
         <b className="grow" style={{ color: 'var(--gold)' }}>
-          🎯 Dry Run Guide {unseenDawn ? `· Dawn ${unseenDawn} ready` : view.planDay ? `· Day ${view.planDay} of ${view.setup.config.days}` : '· Complete'}
+          {t('coach.collapsedTitle', { status })}
         </b>
         <button className="linkbtn" style={{ padding: 0, fontSize: 12 }} onClick={onToggleCollapse}>
-          Show ▾
+          {t('coach.show')}
         </button>
       </div>
     );
@@ -610,13 +639,13 @@ function DryRunCoach({
     return (
       <div style={boxStyle} className="col">
         <div className="row" style={{ justifyContent: 'space-between' }}>
-          <b style={{ color: 'var(--gold)' }}>☀ Step 4 · Dawn {unseenDawn} has arrived!</b>
+          <b style={{ color: 'var(--gold)' }}>{t('coach.dawnArrivedTitle', { day: unseenDawn })}</b>
           <button className="linkbtn" style={{ padding: 0, fontSize: 12 }} onClick={onToggleCollapse}>
-            Hide ▴
+            {t('coach.hide')}
           </button>
         </div>
         <div>
-          All reports and plans have locked in, gold was paid, towers were built, and the battle was fought. Tap <b>☀ Watch Dawn {unseenDawn}</b> at the bottom to watch the replay!
+          <RichText i18nKey="coach.dawnArrivedBody" values={{ day: unseenDawn }} />
         </div>
       </div>
     );
@@ -626,20 +655,18 @@ function DryRunCoach({
     return (
       <div style={boxStyle} className="col">
         <div className="row" style={{ justifyContent: 'space-between' }}>
-          <b style={{ color: 'var(--gold)' }}>🎉 Dry Run Complete!</b>
+          <b style={{ color: 'var(--gold)' }}>{t('coach.completeTitle')}</b>
           <button className="linkbtn" style={{ padding: 0, fontSize: 12 }} onClick={onToggleCollapse}>
-            Hide ▴
+            {t('coach.hide')}
           </button>
         </div>
-        <div>
-          You completed all 3 days and faced the Boss! In a real challenge, each day stays open until the next morning's Dawn ({view.setup.config.dawnTime}).
-        </div>
+        <div>{t('coach.completeBody', { dawnTime: view.setup.config.dawnTime })}</div>
         <div className="row" style={{ flexWrap: 'wrap', gap: 6 }}>
           <button className="btn small" onClick={onRestart}>
-            ↻ Restart dry run
+            {t('coach.restartDryRun')}
           </button>
           <button className="btn small gold" onClick={onNewChallenge}>
-            ⚔ Start real challenge
+            {t('coach.startRealChallenge')}
           </button>
         </div>
       </div>
@@ -649,84 +676,58 @@ function DryRunCoach({
   const day = view.planDay ?? 1;
   const reported = Boolean(view.myCheckin(day));
   const hasOrders = view.myOrders.length > 0;
+  const theme = getTheme(view.setup.config.theme);
 
   let hint: React.ReactNode;
   if (!scouted) {
     hint =
       day === 1 ? (
-        <>
-          <b>Step 1 · Scout:</b> Tap <b>👁 Scout</b> (or a red road arrow) to see which roads the horde will attack tonight and what enemy types are marching.
-        </>
+        <RichText i18nKey="coach.hintScoutDay1" />
       ) : day === 2 ? (
-        <>
-          <b>Day 2 · Tougher foes:</b> New enemy types unlock as the season progresses. Tap <b>👁 Scout</b> to inspect tonight's roads!
-        </>
+        <RichText i18nKey="coach.hintScoutDay2" />
       ) : (
-        <>
-          <b>Day 3 · Boss Night!</b> On the final night (and every 7th day), <b>The Sugar Wraith</b> marches. Tap <b>👁 Scout</b> to find the Boss road!
-        </>
+        <RichText i18nKey="coach.hintScoutDay3" values={{ bossName: theme.bossName }} />
       );
   } else if (!reported) {
-    hint =
-      day === 1 ? (
-        <>
-          <b>Step 2 · Report your habit:</b> Tap <b>✔ Report</b> to log today's checklist. Hitting your target earns full gold (+72g) and +2 Hero XP; even an honest partial/missed report still earns gold and triggers the <b>Team Rally</b> (+15% tower speed)!
-        </>
-      ) : (
-        <>
-          <b>Step 2 · Report for Day {day}:</b> Tap <b>✔ Report</b>. (Tip: try checking only 1 or 2 boxes to see how partial reports still pay gold, or check all 3 for full gold!)
-        </>
-      );
+    hint = day === 1 ? <RichText i18nKey="coach.hintReportDay1" /> : <RichText i18nKey="coach.hintReportOther" values={{ day }} />;
   } else if (!hasOrders) {
     hint =
       day === 1 ? (
-        <>
-          <b>Step 3 · Build towers ({gold}g available):</b> Tap a gold <b>＋</b> on your plots to build towers (try an <b>Archer Tower</b> and a <b>Barracks</b>). <b>⚒ Plan</b> lists all your plots (build, upgrade, repair) and sets your Hero's stance.
-        </>
+        <RichText i18nKey="coach.hintOrdersDay1" values={{ gold }} />
       ) : day === 2 ? (
-        <>
-          <b>Step 3 · Upgrade & share ({gold}g available):</b> Tap a tower with a green <b>⬆</b> (or use <b>⚒ Plan → Your plots</b>) to <b>Upgrade</b> it to Level 2, build a <b>Mage Tower</b> against armoured enemies, or donate gold to the <b>Keep</b> in <b>⚒ Plan</b>.
-        </>
+        <RichText i18nKey="coach.hintOrdersDay2" values={{ gold }} />
       ) : (
-        <>
-          <b>Step 3 · Boss Night prep ({gold}g available):</b> Build/upgrade towers and open <b>⚒ Plan</b> to send your <b>Hero</b> to reinforce the road the Boss is attacking!
-        </>
+        <RichText i18nKey="coach.hintOrdersDay3" values={{ gold }} />
       );
   } else {
-    hint = (
-      <>
-        <b>Step 4 · Ready for Dawn {day}!</b> In a real challenge, you'd now wait until tomorrow morning ({view.setup.config.dawnTime}). In this dry run, tap <b>⏩ Skip to Dawn {day}</b> below!
-      </>
-    );
+    hint = <RichText i18nKey="coach.hintReady" values={{ day, dawnTime: view.setup.config.dawnTime }} />;
   }
 
   return (
     <div style={{ ...boxStyle, gap: 6 }} className="col">
       <div className="row" style={{ justifyContent: 'space-between' }}>
-        <b style={{ color: 'var(--gold)' }}>
-          🎯 Dry Run · Day {day} of {view.setup.config.days}
-        </b>
+        <b style={{ color: 'var(--gold)' }}>{t('coach.headerDay', { day, total: view.setup.config.days })}</b>
         <div className="row" style={{ gap: 10 }}>
           <button className="linkbtn" style={{ padding: 0, fontSize: 12 }} onClick={onTutorial}>
-            📖 Guide
+            {t('coach.guide')}
           </button>
           <button className="linkbtn" style={{ padding: 0, fontSize: 12 }} onClick={onToggleCollapse}>
-            Hide ▴
+            {t('coach.hide')}
           </button>
         </div>
       </div>
       <div className="row" style={{ flexWrap: 'wrap', gap: 4 }}>
         <button type="button" className="chip" style={{ cursor: 'pointer', borderColor: scouted ? 'var(--green)' : undefined }} onClick={onScout}>
-          {scouted ? '✓' : '1.'} Scout
+          {t('coach.chipScout', { prefix: scouted ? '✓' : '1.' })}
         </button>
         <button type="button" className="chip" style={{ cursor: 'pointer', borderColor: reported ? 'var(--green)' : undefined }} onClick={onReport}>
-          {reported ? '✓' : '2.'} Report
+          {t('coach.chipReport', { prefix: reported ? '✓' : '2.' })}
         </button>
         <button type="button" className="chip" style={{ cursor: 'pointer', borderColor: hasOrders ? 'var(--green)' : undefined }} onClick={hasOrders ? onPlan : onFocusPlots}>
-          {hasOrders ? '✓' : '3.'} Build & Plan
+          {t('coach.chipBuildPlan', { prefix: hasOrders ? '✓' : '3.' })}
         </button>
         <button type="button" className="chip" style={{ cursor: 'pointer', borderColor: 'var(--gold)', color: 'var(--gold)' }} onClick={onSkipDawn}>
-          ⏩ Skip to Dawn {day}
+          {t('coach.chipSkipDawn', { day })}
         </button>
       </div>
       <div>{hint}</div>

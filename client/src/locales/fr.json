@@ -1,0 +1,562 @@
+{
+  "app": {
+    "title": "Le Siège",
+    "tagline": "Tenez vos habitudes. Tenez la ligne. Ensemble.",
+    "loading": "Chargement…",
+    "loadingValley": "Chargement de la vallée…",
+    "unknownDevTool": "Outil de développement inconnu. Essayez /dev/sandbox, /dev/map-editor, /dev/gallery ou /dev/vfx."
+  },
+  "common": {
+    "home": "‹ Accueil",
+    "back": "‹ Retour",
+    "backSimple": "Retour",
+    "next": "Suivant",
+    "close": "Fermer",
+    "save": "Enregistrer",
+    "saved": "Enregistré",
+    "you": "Vous",
+    "bot": "(bot)",
+    "language": "Langue",
+    "durationNow": "maintenant",
+    "durationDaysHours": "{{d}}j {{h}}h",
+    "durationHoursMinutes": "{{h}}h {{m}}min",
+    "durationMinutes": "{{m}}min"
+  },
+  "onboarding": {
+    "whoAreYou": "Qui êtes-vous, défenseur ?",
+    "yourName": "Votre nom",
+    "namePlaceholder": "ex. Anna",
+    "begin": "Commencer",
+    "howItWorks": "📖 Nouveau ici ? Comment fonctionne Le Siège",
+    "otherDeviceLink": "Je joue déjà sur un autre appareil",
+    "otherDeviceTitle": "Utiliser un autre appareil",
+    "otherDeviceHint": "Sur votre autre appareil, ouvrez Paramètres → « Utiliser sur un autre appareil » et saisissez le code ici.",
+    "transferCode": "Code de transfert",
+    "codePlaceholder": "ABC123",
+    "continue": "Continuer",
+    "offlineNote": "Mode démo hors ligne : la progression est stockée sur cet appareil ; vos coéquipiers sont des bots.",
+    "howToPlay": "Comment jouer"
+  },
+  "home": {
+    "help": "📖 Aide",
+    "offlineChip": "Démo hors ligne · coéquipiers bots",
+    "emptyTitle": "Aucun siège en cours",
+    "emptyText": "Lancez un défi avec des amis — ou découvrez les bases avec un galop d'essai guidé.",
+    "howToPlay": "📖 Comment jouer",
+    "tryDryRun": "🎯 Essayer un galop d'essai",
+    "practicePrefix": "Entraînement · ",
+    "seasonOver": "Saison terminée",
+    "startsIn": "Commence dans {{duration}}",
+    "dayOf": "Jour {{day}} sur {{total}}",
+    "defenders_one": "{{count}} défenseur",
+    "defenders_other": "{{count}} défenseurs",
+    "newChallenge": "⚔ Nouveau défi",
+    "invitePlaceholder": "Code d'invitation",
+    "join": "Rejoindre",
+    "practice3Day": "🎯 S'entraîner sur un essai de 3 jours"
+  },
+  "join": {
+    "inviteSummary_one": "{{creator}} vous invite à défendre la vallée. {{count}} défenseur inscrit · {{days}} jours à partir du {{startDate}}.",
+    "inviteSummary_other": "{{creator}} vous invite à défendre la vallée. {{count}} défenseurs inscrits · {{days}} jours à partir du {{startDate}}.",
+    "chooseHero": "Choisissez votre héros",
+    "joinButton": "⚔ Rejoindre le siège",
+    "notJoinable": "Ce défi a déjà commencé ou est complet."
+  },
+  "settings": {
+    "title": "Paramètres",
+    "yourName": "Votre nom",
+    "languageTitle": "Langue",
+    "soundAndNotifications": "Son et notifications",
+    "soundEffects": "Effets sonores",
+    "remindersAndDawn": "Rappels et notifications de l'Aube",
+    "notificationsOn": "Notifications activées",
+    "pushUnsupportedHint": "Non pris en charge par ce navigateur. Sur iPhone : ajoutez d'abord l'application à l'écran d'accueil.",
+    "otherDeviceTitle": "Utiliser sur un autre appareil",
+    "otherDeviceInstructions": "Générez un code et saisissez-le sur l'autre appareil (« Je joue déjà sur un autre appareil » ou ci-dessous).",
+    "validFor": "valide pendant {{time}}",
+    "transferExpired": "expiré",
+    "showTransferCode": "Afficher le code de transfert",
+    "useCodeFromOther": "Ou utilisez un code provenant d'un autre appareil :",
+    "useCode": "Utiliser le code",
+    "switchedTo": "Connecté en tant que {{name}}",
+    "about": "À propos",
+    "modeLabel": "Mode :",
+    "modeOnline": "En ligne",
+    "modeOffline": "Démo hors ligne (cet appareil uniquement)",
+    "confirmReset": "Supprimer toutes les données locales de démonstration ?",
+    "resetDemoData": "Réinitialiser les données démo"
+  },
+  "create": {
+    "title": "Nouveau défi",
+    "stepWhat": "Quel est le défi ?",
+    "titleLabel": "Titre",
+    "titlePlaceholder": "Zéro sucre pendant 30 jours",
+    "typeLabel": "Type",
+    "typeBinary": "Oui / non — une seule règle",
+    "typeChecklist": "Liste — plusieurs règles",
+    "typeNumeric": "Nombre — ex. pas, minutes",
+    "rulePlaceholder": "Règle {{n}}",
+    "addRule": "+ ajouter une règle",
+    "dailyTarget": "Objectif quotidien",
+    "unit": "Unité",
+    "betterIs": "Le mieux est",
+    "directionHigher": "plus élevé (au moins l'objectif)",
+    "directionLower": "plus bas (au maximum l'objectif)",
+    "stepWhen": "Quand ?",
+    "startDate": "Date de début",
+    "days": "Jours",
+    "dawnLabel": "Aube — heure de la bataille quotidienne (le lendemain matin)",
+    "difficulty": "Difficulté",
+    "diff_very_easy": "Très facile",
+    "diff_easy": "Facile",
+    "diff_normal": "Normale",
+    "diff_hard": "Difficile",
+    "enemyHorde": "Horde ennemie",
+    "restDays": "Jours de repos / pause (optionnel — ignorés)",
+    "addRestDay": "+ Ajouter",
+    "timeZoneHint": "Fuseau horaire : {{tz}}. Vous pouvez faire votre bilan chaque jour jusqu'à l'Aube du lendemain matin.",
+    "chooseHero": "Choisissez votre héros",
+    "botTeammates": "Coéquipiers bots : {{count}}",
+    "submit": "⚔ Hisser les bannières",
+    "presets": {
+      "noSugarTitle": "Zéro sucre",
+      "noSugarRule1": "Aucun sucre ajouté aujourd'hui",
+      "stepsTitle": "8 000 pas",
+      "stepsUnit": "pas",
+      "cleanTitle": "Vie saine",
+      "cleanRule1": "Pas de sucre",
+      "cleanRule2": "Pas d'alcool",
+      "cleanRule3": "Au lit avant 23h00",
+      "screenTitle": "Moins d'écran",
+      "screenUnit": "min"
+    }
+  },
+  "lobby": {
+    "gathering": "Rassemblement des défenseurs",
+    "beginsIn": "Le siège commence dans <bold>{{duration}}</bold> ({{startDate}}) et dure {{days}} jours.",
+    "inviteFriends": "Invitez vos amis — ils peuvent rejoindre jusqu'au départ :",
+    "shareText": "Rejoins mon défi « {{title}} »",
+    "linkCopied": "Lien copié",
+    "shareInviteLink": "Partager le lien d'invitation",
+    "startNowDemo": "⏩ Démarrer maintenant (démo)",
+    "defenders": "Défenseurs"
+  },
+  "hud": {
+    "seasonComplete": "Saison terminée",
+    "dayStatus": "Jour {{day}} sur {{total}} · Aube dans {{duration}}",
+    "simMismatch": "⚠ Ce défi utilise les règles v{{challengeVer}}, cette application tourne en v{{appVer}}. Les batailles peuvent différer de celles de vos coéquipiers — veuillez mettre à jour l'application.",
+    "desyncWarning": "⚠ Désynchronisé avec vos coéquipiers depuis le jour {{day}}. Veuillez mettre à jour l'application.",
+    "watchDawn": "☀ Voir l'Aube {{day}}",
+    "report": "✔ Bilan",
+    "plan": "⚒ Planifier",
+    "scout": "👁 Guetter",
+    "backToPlots": "Retour à mes emplacements",
+    "ownersPlot": "Emplacement de {{name}}",
+    "reportedToast": "Bilan enregistré — merci, défenseur !",
+    "inviteCopiedToast": "Code d'invitation {{code}} copié"
+  },
+  "replay": {
+    "dawnBanner": "Aube {{day}}",
+    "skip": "Passer ⏭",
+    "hordeDefeated": "⚔ Horde vaincue",
+    "sunrise": "☀ Lever du soleil",
+    "subCleared": "tous les ennemis sont tombés ou sont passés",
+    "subRetreat": "les ennemis survivants battent en retraite",
+    "subUntilSunrise": "jusqu'au lever du soleil — puis les survivants battent en retraite"
+  },
+  "menu": {
+    "title": "Menu",
+    "howToPlay": "📖 Comment jouer",
+    "replayDawn": "↻ Revoir l'Aube {{day}}",
+    "lastReport": "📜 Dernier rapport",
+    "inviteCode": "✉ Code d'invitation : {{code}}",
+    "skipToNextDawn": "⏩ Passer à la prochaine Aube (démo)",
+    "restartDryRun": "↻ Recommencer l'essai",
+    "settings": "⚙ Paramètres",
+    "goldAfterPlans": "Votre or après planification :"
+  },
+  "coach": {
+    "collapsedTitle": "🎯 Guide d'essai {{status}}",
+    "statusDawnReady": "· Aube {{day}} prête",
+    "statusDayOf": "· Jour {{day}} sur {{total}}",
+    "statusComplete": "· Terminé",
+    "show": "Afficher ▾",
+    "hide": "Masquer ▴",
+    "guide": "📖 Guide",
+    "dawnArrivedTitle": "☀ Étape 4 · L'Aube {{day}} est arrivée !",
+    "dawnArrivedBody": "Tous les bilans et ordres sont verrouillés, l'or a été versé, les tours bâties et la bataille livrée. Appuyez sur <bold>☀ Voir l'Aube {{day}}</bold> en bas pour regarder le combat !",
+    "completeTitle": "🎉 Essai terminé !",
+    "completeBody": "Vous avez accompli les 3 jours et affronté le Boss ! Dans un vrai défi, chaque journée reste ouverte jusqu'à l'Aube du lendemain matin ({{dawnTime}}).",
+    "restartDryRun": "↻ Recommencer l'essai",
+    "startRealChallenge": "⚔ Lancer un vrai défi",
+    "headerDay": "🎯 Essai · Jour {{day}} sur {{total}}",
+    "chipScout": "{{prefix}} Guetter",
+    "chipReport": "{{prefix}} Bilan",
+    "chipBuildPlan": "{{prefix}} Bâtir & Planifier",
+    "chipSkipDawn": "⏩ Aller à l'Aube {{day}}",
+    "hintScoutDay1": "<bold>Étape 1 · Guetter :</bold> Appuyez sur <bold>👁 Guetter</bold> (ou sur une flèche rouge) pour voir quelles routes la horde attaquera cette nuit et quels types d'ennemis approchent.",
+    "hintScoutDay2": "<bold>Jour 2 · Ennemis plus coriaces :</bold> De nouveaux ennemis apparaissent au fil de la saison. Appuyez sur <bold>👁 Guetter</bold> pour inspecter les routes de cette nuit !",
+    "hintScoutDay3": "<bold>Jour 3 · Nuit de Boss !</bold> Lors de la dernière nuit (et tous les 7 jours), <bold>{{bossName}}</bold> marche sur la vallée. Appuyez sur <bold>👁 Guetter</bold> pour repérer sa route !",
+    "hintReportDay1": "<bold>Étape 2 · Faire votre bilan :</bold> Appuyez sur <bold>✔ Bilan</bold> pour cocher vos habitudes du jour. Atteindre l'objectif rapporte tout l'or (+72g) et +2 XP ; même un bilan partiel honnête rapporte de l'or et déclenche le <bold>Ralliement</bold> (+15 % de cadence) !",
+    "hintReportOther": "<bold>Étape 2 · Bilan du jour {{day}} :</bold> Appuyez sur <bold>✔ Bilan</bold>. (Astuce : essayez de ne cocher qu'une ou deux cases pour voir le gain partiel, ou les 3 pour le plein d'or !)",
+    "hintOrdersDay1": "<bold>Étape 3 · Bâtir des tours ({{gold}}g disponibles) :</bold> Touchez un <bold>＋</bold> doré sur vos emplacements pour bâtir (essayez une <bold>Tour d'archers</bold> et une <bold>Caserne</bold>). <bold>⚒ Planifier</bold> liste tous vos emplacements et la posture de votre héros.",
+    "hintOrdersDay2": "<bold>Étape 3 · Améliorer & partager ({{gold}}g disponibles) :</bold> Touchez une tour avec un <bold>⬆</bold> vert (ou via <bold>⚒ Planifier → Vos emplacements</bold>) pour passer au <bold>Niveau 2</bold>, bâtissez une <bold>Tour de mage</bold> contre les blindés, ou donnez de l'or au <bold>Donjon</bold>.",
+    "hintOrdersDay3": "<bold>Étape 3 · Préparer la Nuit de Boss ({{gold}}g disponibles) :</bold> Bâtissez/améliorez vos tours et ouvrez <bold>⚒ Planifier</bold> pour envoyer votre <bold>Héros</bold> renforcer la route du Boss !",
+    "hintReady": "<bold>Étape 4 · Prêt pour l'Aube {{day}} !</bold> Dans un vrai défi, vous attendriez demain matin ({{dawnTime}}). Dans cet essai, appuyez sur <bold>⏩ Aller à l'Aube {{day}}</bold> ci-dessous !"
+  },
+  "checkin": {
+    "title": "Bilan du jour",
+    "dayButton": "Jour {{day}}{{check}}",
+    "dayDateHint": "Jour {{day}} · {{date}} — modifiable jusqu'à l'Aube.",
+    "allKept": "Tout accompli",
+    "howMuchLower": "Combien ? (objectif : au maximum {{target}} {{unit}})",
+    "howMuchHigher": "Combien ? (objectif : {{target}} {{unit}})",
+    "statusInspired": "🔥 Inspiré !",
+    "statusTarget": "✔ Objectif atteint",
+    "statusHonest": "Bilan honnête — rapporte quand même",
+    "honestyHint": "L'honnêteté paie : un jour manqué rapporte tout de même {{minGold}}+ d'or. Sans bilan, vous ne gagnez rien et votre héros reste au camp.",
+    "submit": "Valider le bilan"
+  },
+  "build": {
+    "buildingHeader": "{{name}} · Niveau {{level}}",
+    "ruins": "Ruines",
+    "emptyPlot": "Emplacement libre",
+    "barracksLine": "{{soldiers}} soldats · {{hp}} PV chacun",
+    "towerLine": "{{dmg}} dég. · portée {{range}}",
+    "hpStat": "PV {{hp}}/{{maxHp}}",
+    "upgradeTo": "Améliorer au niveau {{level}}",
+    "repair": "Réparer",
+    "repairDesc": "Restaurer tous les PV avant l'Aube.",
+    "fullyUpgraded": "Au niveau maximum et en parfait état.",
+    "undoPlotPlans": "↺ Annuler les ordres du jour pour cet emplacement"
+  },
+  "plan": {
+    "title": "Ordres pour l'Aube",
+    "subtitle": "Touchez vos emplacements lumineux sur la carte pour bâtir. Modifiable jusqu'à l'Aube.",
+    "noPlans": "Aucun ordre pour le moment.",
+    "yourPlots": "Vos emplacements",
+    "yourPlotsHint": "Bâtissez sur les emplacements libres, améliorez vos tours (dégâts, portée, PV) ou réparez-les.",
+    "buildingLv": "{{name}} · Niv. {{level}}",
+    "freePlot": "Emplacement libre",
+    "plotIndex": " · empl. {{n}}",
+    "buildButton": "Bâtir",
+    "showOnMap": "Voir sur la carte",
+    "yourHero": "Votre héros",
+    "heroStats": "Niv. {{level}} · {{hp}} PV de base",
+    "statusTonight": "État cette nuit : {{status}}",
+    "heroStatus": {
+      "absent": "reste au camp (pas encore de bilan)",
+      "weary": "épuisé",
+      "normal": "prêt",
+      "inspired": "inspiré"
+    },
+    "stanceOwn": "Défendre mon propre secteur",
+    "stanceKeep": "Défendre le Donjon",
+    "stanceReinforce": "Renforcer {{name}} ({{sector}})",
+    "stanceHelp": {
+      "own": "Votre héros garde le point de ralliement de votre premier secteur et combat les ennemis qui passent.",
+      "keep": "Dernière ligne de défense : votre héros se poste devant le Donjon et intercepte tout ennemi au bout des routes (portée étendue).",
+      "neighbor": "Votre héros combat dans le secteur d'un coéquipier — idéal lorsque sa route subit une grosse vague ou le Boss."
+    },
+    "shareGold": "Partager de l'or",
+    "keepProgress": "Donjon niveau {{level}} · trésor {{fund}} / {{nextFund}} pour le niveau suivant (plus de PV, meilleurs archers)",
+    "keepMax": "Donjon niveau {{level}} · trésor {{fund}} (niveau max)",
+    "theKeep": "Le Donjon",
+    "give": "Donner",
+    "orders": {
+      "build": "Bâtir {{name}}",
+      "upgrade": "Améliorer le bâtiment",
+      "repair": "Réparer le bâtiment",
+      "donateKeep": "Donner {{amount}} d'or au Donjon",
+      "donatePlayer": "Donner {{amount}} d'or à {{name}}",
+      "stanceOwn": "Le héros défend son secteur",
+      "stanceKeep": "Le héros défend le Donjon",
+      "stanceNeighbor": "Le héros renforce {{sector}}"
+    }
+  },
+  "intent": {
+    "title": "Rapport d'éclaireur · Aube {{day}}",
+    "seasonOver": "La saison est terminée.",
+    "bossBanner": "<bold>Nuit de Boss !</bold> {{bossName}} est en marche. Terrassez le boss pour une étoile bonus et +{{gold}} d'or chacun.",
+    "bestiaryTitle": "Bestiaire ({{themeName}})",
+    "bossHp": "immense",
+    "enemyHp": "{{hp}} PV"
+  },
+  "report": {
+    "titleFell": "Le Donjon est tombé…",
+    "titleFlawless": "Défense sans faille !",
+    "titleHeld": "La ligne a tenu",
+    "dawnLabel": "Aube {{day}}",
+    "keepSummary": "Donjon {{before}} → {{after}}",
+    "leaks_one": "{{count}} est passé",
+    "leaks_other": "{{count}} sont passés",
+    "bossSlain": "⚔ {{bossName}} a été terrassé ! Étoile bonus et +{{gold}} d'or chacun.",
+    "rally": "Ralliement ! Tout le monde a fait son bilan — les tours ont tiré plus vite.",
+    "keepRebuildHint": "Il sera reconstruit à moitié de sa résistance. Regroupez-vous et réparez !",
+    "yourReport": "Votre bilan",
+    "reportNone": "aucun — le héros est resté au camp",
+    "reportTarget": "objectif atteint",
+    "reportMiss": "écart honnête",
+    "goldEarned": "Or gagné",
+    "combatStats": "Vos dégâts · éliminations · blocages",
+    "notCarriedOut": "Non exécuté : {{items}}",
+    "sunriseRetreat": "☀ Au lever du soleil, ces ennemis ont battu en retraite (sans dégâts au Donjon, mais sans élimination) : {{enemies}}",
+    "escapedSingle": "{{name}} ({{hp}}% PV)",
+    "escapedMultiple": "{{count}}× {{name}}",
+    "heroesOfNight": "Héros de la nuit",
+    "mvpDamage": "🏹 Meilleurs dégâts :",
+    "mvpWall": "🛡 Le Rempart :",
+    "mvpPatron": "💰 Mécène :",
+    "seasonComplete": "Saison terminée !",
+    "rankSummary": "Rang : <bold>{{rank}}</bold> · {{pct}} % des étoiles",
+    "ranks": {
+      "bronze": "Bronze",
+      "silver": "Argent",
+      "gold": "Or",
+      "legendary": "Légendaire"
+    },
+    "watchAgain": "↻ Revoir le combat",
+    "onward": "En avant"
+  },
+  "tutorial": {
+    "title": "Comment jouer",
+    "intro": "<bold>Le Siège</bold> est un défi d'habitudes coopératif et un jeu de défense de base pour <bold>2 à 8 joueurs</bold> sur <bold>7 à 90 jours</bold>. Chaque joueur protège un secteur de la vallée ; vos bilans quotidiens dans la vraie vie rapportent de l'or et envoient votre héros au combat avant l'assaut de la horde à l'<bold>Aube</bold>.",
+    "tabs": {
+      "timeline": "⏳ Déroulement",
+      "daily": "✔ Boucle du jour",
+      "defenders": "🏰 Tours & héros",
+      "enemies": "👾 Ennemis & étoiles"
+    },
+    "timeline": {
+      "s1Title": "1. Avant le Jour 1 · Rassembler les défenseurs (Salon)",
+      "s1Bullet1": "• <bold>Un joueur crée le défi :</bold> choisissez un type d'habitude (<i>Oui/Non</i>, <i>Liste</i> ou objectif <i>Numérique</i>), la date de début, la durée (7 à 90 jours actifs), la difficulté et l'<bold>heure de l'Aube</bold> (11h00 par défaut).",
+      "s1Bullet2": "• <bold>Partagez le code d'invitation à 6 caractères :</bold> vos amis rejoignent avant le début et choisissent leur <bold>Classe de héros</bold>. Dès le Jour 1, l'équipe est verrouillée et les routes/secteurs sont attribués.",
+      "s2Title": "2. Chaque jour & soir · Bilan & Planification (00h00 → Aube le lendemain)",
+      "s2Intro": "Chaque jour actif reste ouvert de <bold>00h00</bold> jusqu'à l'<bold>Aube le lendemain matin</bold> (ex. 11h00 le lendemain — vous pouvez donc faire votre bilan le soir ou au petit-déjeuner) :",
+      "s2Scout": "• <bold>👁 Guetter :</bold> Repérez quelles routes la vague de cette nuit empruntera et quel type d'ennemi spécial sera présent.",
+      "s2Report": "• <bold>✔ Bilan :</bold> Indiquez si vous avez tenu votre habitude du jour. Cela rapporte de l'or, fait progresser votre héros et l'envoie combattre cette nuit.",
+      "s2Plan": "• <bold>⚒ Planifier & Bâtir :</bold> Touchez vos <bold>emplacements lumineux</bold> pour bâtir, améliorer ou réparer des tours, choisir la posture de votre héros ou partager de l'or. <i>Tout reste modifiable jusqu'à l'Aube !</i>",
+      "s3Title": "3. À l'Aube (lendemain matin) · L'assaut nocturne",
+      "s3StepsIntro": "Lorsque l'Aube arrive, la journée se clôt et se résout automatiquement en 4 étapes :",
+      "s3StepsFlow": "<bold>1. Économie</bold> (or & XP versés, Ralliement vérifié) → <bold>2. Ordres</bold> (tours bâties/améliorées, or partagé) → <bold>3. Bataille</bold> (la horde marche vers le Donjon) → <bold>4. Rapport de l'Aube</bold> (0–3 ★ étoiles & héros de la nuit).",
+      "s3Watch": "• Ouvrez l'application après l'Aube et appuyez sur <bold>☀ Voir l'Aube</bold> pour visionner la bataille et préparer la nouvelle journée."
+    },
+    "daily": {
+      "s1Title": "✔ Étape 1 : Faire son bilan (L'honnêteté paie toujours !)",
+      "s1Intro": "Votre bilan quotidien détermine votre or, l'XP de votre héros et son état pour la bataille :",
+      "inspired": "🔥 <bold>Inspiré (150 %+ d'un objectif numérique) :</bold> Base <bold>{{gold}}g</bold> · <bold>+{{xp}} XP</bold> · Le héros gagne <bold>+20 % PV & dégâts</bold> cette nuit.",
+      "target": "✅ <bold>Objectif atteint (100 %) :</bold> Base <bold>{{gold}}g</bold> · <bold>+{{xp}} XP</bold> · Le héros combat à pleine puissance.",
+      "miss": "🤝 <bold>Écart honnête (moins de 100 %) :</bold> Base <bold>{{minGold}}–{{maxGold}}g</bold> · <bold>+{{xp}} XP</bold> · Le héros combat quand même (<i>Épuisé</i>, −20 % dég.). <bold>Signaler un écart vaut toujours bien mieux que le silence !</bold>",
+      "none": "💤 <bold>Aucun bilan envoyé :</bold> <bold>0g</bold> · <bold>0 XP</bold> · Le héros <bold>reste au camp</bold>. Après {{dormantAfter}} oublis consécutifs, votre joueur passe <i>En sommeil</i> jusqu'au prochain bilan.",
+      "rally": "<bold>Ralliement d'équipe :</bold> Dès que <bold>chaque</bold> joueur envoie son bilan (même un écart honnête !), la bannière de Ralliement flotte sur le Donjon et <bold>toutes les tours tirent +15 % plus vite</bold> cette nuit.",
+      "s2Title": "⚒ Étape 2 : Bâtir des tours, placer votre héros & partager l'or",
+      "s2Plots": "• <bold>Touchez vos emplacements lumineux</bold> (marqueurs <bold>＋</bold> dorés) sur la carte pour <bold>bâtir</bold> une tour de niveau 1. <bold>Touchez une tour vous appartenant</bold> pour l'<bold>améliorer</bold> (Niv. 1 → 2 → 3) ou <bold>réparer</bold> les dégâts — un <bold>⬆</bold> vert indique une amélioration abordable. <bold>⚒ Planifier → Vos emplacements</bold> les liste tous. Appuyez sur <bold>📍</bold> pour revenir à vos emplacements.",
+      "s2Hero": "• <bold>Ouvrez ⚒ Planifier</bold> pour choisir où votre <bold>Héros</bold> combat cette nuit : défendre votre secteur, garder le Donjon (dernière ligne au bout de toutes les routes) ou <bold>renforcer la route d'un coéquipier</bold> face à une grosse vague ou au Boss !",
+      "s2Share": "• <bold>Partager de l'or :</bold> Dans <bold>⚒ Planifier</bold>, envoyez de l'or (min. {{minDonate}}g) à un allié ou contribuez au <bold>Trésor du Donjon</bold> ({{fund2}}g → Niv. 2, {{fund3}}g → Niv. 3 pour plus de PV et de meilleurs archers)."
+    },
+    "defenders": {
+      "towersHeading": "Tours (Niv. 1 → Niv. 3)",
+      "towersNote": "Les tours ont {{hpList}} PV (Niv. 1/2/3). Les engins de siège les endommagent ; à 0 PV, une tour tombe en Ruines et doit être rebâtie.",
+      "archerRole": "Flèches physiques rapides monocibles · touche sol & air",
+      "archerDetails": "{{dmg}} dég. · portée {{range}} · {{rate}} tir/s",
+      "barracksRole": "Entraîne des fantassins qui bloquent et combattent les ennemis au sol",
+      "barracksDetails": "{{soldiers}} soldats · {{hp}} PV · {{dmg}} dég./s (réapp. {{respawn}}s)",
+      "mageRole": "Éclairs magiques ignorant l'armure · touche sol & air",
+      "mageDetails": "{{dmg}} dég. · portée {{range}} · {{rate}} tir/s",
+      "catapultRole": "Lourds dégâts de zone lents au sol · ne touche pas les volants",
+      "catapultDetails": "{{dmg}} dég. de zone · portée {{range}} · {{rate}} tir/s",
+      "heroesHeading": "Classes de héros (Niv. 1 → Niv. 5)",
+      "heroesNote": "Les héros gagnent +12 % PV & dégâts par niveau et réapparaissent 10s après être tombés — tant que vous avez fait votre bilan du jour !",
+      "heroStatLine": "{{hp}} PV · {{dmg}} dég."
+    },
+    "enemies": {
+      "heading": "{{themeName}} & Contres",
+      "bossNight": "Nuit de Boss",
+      "enemyStats": "{{hp}} PV · percée −{{leak}} PV Donjon",
+      "starsHeading": "Étoiles, Nuits de Boss & Reconstruction",
+      "starsLine": "• <bold>★★★ :</bold> 0 percée · <bold>★★ :</bold> ≤10 % PV perdus · <bold>★ :</bold> le Donjon a survécu · <bold>0 ★ :</bold> le Donjon est tombé.",
+      "noGameOver": "• <bold>Pas de Game Over :</bold> Si le Donjon tombe, il est reconstruit à <bold>50 % PV</bold> le lendemain matin (et récupère +5 PV par jour).",
+      "bossNights": "• <bold>Nuits de Boss :</bold> Tous les 7 jours actifs (saisons de 14+ jours) et lors de la <bold>dernière nuit</bold>. Vaincre le Boss offre <bold>+1 Étoile bonus</bold> et <bold>+{{gold}} d'or</bold> à chaque défenseur !"
+    },
+    "dryRunCard": {
+      "title": "🎯 Galop d'essai interactif (Entraînement sur 3 jours)",
+      "desc": "Entraînez-vous à guetter, faire votre bilan, bâtir des tours et passer à l'Aube lors d'une mini-saison guidée de 3 jours avec deux bots (<bold>Brin</bold> & <bold>Mara</bold>) — jusqu'au Boss du Jour 3 !",
+      "start": "⚔ Lancer l'essai de 3 jours"
+    }
+  },
+  "canvas": {
+    "keepLevel": "Donjon Niveau {{level}} !",
+    "rally": "RALLIEMENT +{{pct}}%",
+    "resting": "{{name}} (au repos)",
+    "waveCount": "×{{total}}",
+    "waveBoss": "×{{total}} + BOSS"
+  },
+  "heroes": {
+    "knight": {
+      "name": "Chevalier",
+      "text": "Tank de mêlée robuste. Bloque deux ennemis à la fois."
+    },
+    "ranger": {
+      "name": "Rôdeur",
+      "text": "Archer à longue portée. Abat les ennemis volants."
+    },
+    "priest": {
+      "name": "Prêtresse",
+      "text": "Magie sacrée qui ignore l'armure et soigne les alliés proches."
+    }
+  },
+  "buildings": {
+    "archer": {
+      "name": "Tour d'archers",
+      "text": "Flèches rapides. Touche les volants."
+    },
+    "barracks": {
+      "name": "Caserne",
+      "text": "Des soldats bloquent la route."
+    },
+    "mage": {
+      "name": "Tour de mage",
+      "text": "Éclairs magiques perçant l'armure."
+    },
+    "catapult": {
+      "name": "Catapulte",
+      "text": "Lourds dégâts de zone. Sol uniquement."
+    }
+  },
+  "roads": {
+    "N": "Route nord-ouest",
+    "E": "Route nord-est",
+    "S": "Route sud-est",
+    "W": "Route sud-ouest",
+    "ring": {
+      "outer": "extérieur",
+      "inner": "intérieur"
+    }
+  },
+  "themes": {
+    "roleTips": {
+      "grunt": "Fantassin de base.",
+      "runner": "Rapide ! Les archers et les soldats les interceptent.",
+      "brute": "Blindé — les flèches l'égratignent à peine. Utilisez des mages.",
+      "flyer": "Survole les soldats. Seuls les archers, mages, rôdeurs et prêtresses le touchent.",
+      "siege": "Démolit les bâtiments au passage. Éliminez-le vite ; réparez ensuite.",
+      "boss": "Boss. Immense santé, accélère les ennemis proches."
+    },
+    "sugar": {
+      "name": "La Horde Sucrée",
+      "bossName": "Le Spectre de Sucre",
+      "roles": {
+        "grunt": { "name": "Grognard Gélifié", "plural": "Grognards Gélifiés" },
+        "runner": { "name": "Diablotin Bonbon", "plural": "Diablotins Bonbon" },
+        "brute": { "name": "Brute Chocolat", "plural": "Brutes Chocolat" },
+        "flyer": { "name": "Chauve-souris Barbe-à-papa", "plural": "Chauves-souris Barbe-à-papa" },
+        "siege": { "name": "Golem Gâteau", "plural": "Golems Gâteau" },
+        "boss": { "name": "Le Spectre de Sucre", "plural": "Le Spectre de Sucre" }
+      }
+    },
+    "sloth": {
+      "name": "Le Bourbier de la Paresse",
+      "bossName": "Le Colosse de Mousse",
+      "roles": {
+        "grunt": { "name": "Traînard Somnolent", "plural": "Traînards Somnolents" },
+        "runner": { "name": "Lutin d'Oreiller", "plural": "Lutins d'Oreiller" },
+        "brute": { "name": "Troll de Canapé", "plural": "Trolls de Canapé" },
+        "flyer": { "name": "Phalène des Songes", "plural": "Phalènes des Songes" },
+        "siege": { "name": "Colosse de Tourbe", "plural": "Colosses de Tourbe" },
+        "boss": { "name": "Le Colosse de Mousse", "plural": "Le Colosse de Mousse" }
+      }
+    },
+    "doom": {
+      "name": "L'Essaim Doomscroll",
+      "bossName": "Le Flux Infini",
+      "roles": {
+        "grunt": { "name": "Marcheur d'Écran", "plural": "Marcheurs d'Écran" },
+        "runner": { "name": "Gremlin de Notif", "plural": "Gremlins de Notif" },
+        "brute": { "name": "Golem Statique", "plural": "Golems Statiques" },
+        "flyer": { "name": "Œil Glitch", "plural": "Yeux Glitch" },
+        "siege": { "name": "Monolithe d'Antenne", "plural": "Monolithes d'Antenne" },
+        "boss": { "name": "Le Flux Infini", "plural": "Le Flux Infini" }
+      }
+    },
+    "ember": {
+      "name": "L'Ost de Braise",
+      "bossName": "Le Souverain des Cendres",
+      "roles": {
+        "grunt": { "name": "Diablotin de Cendre", "plural": "Diablotins de Cendre" },
+        "runner": { "name": "Molosse d'Étincelle", "plural": "Molosses d'Étincelle" },
+        "brute": { "name": "Brute de Basalte", "plural": "Brutes de Basalte" },
+        "flyer": { "name": "Vouivre de Braise", "plural": "Vouivres de Braise" },
+        "siege": { "name": "Bélier de Magma", "plural": "Béliers de Magma" },
+        "boss": { "name": "Le Souverain des Cendres", "plural": "Le Souverain des Cendres" }
+      }
+    }
+  },
+  "dryRun": {
+    "defaultTitle": "Essai : Tenir la Vallée",
+    "rule1": "Boire un verre d'eau",
+    "rule2": "Prendre 5 grandes inspirations",
+    "rule3": "S'étirer pendant 2 minutes"
+  },
+  "errors": {
+    "network_offline": "Erreur réseau — êtes-vous hors ligne ?",
+    "database_error": "Erreur de base de données.",
+    "missing_token": "Veuillez d'abord vous connecter.",
+    "invalid_token": "Session invalide — veuillez vous réinscrire.",
+    "not_registered": "Non inscrit.",
+    "invalid_name": "Le nom doit contenir de {{min}} à {{max}} caractères.",
+    "invalid_transfer_code": "Code invalide ou expiré.",
+    "transfer_needs_server": "Le transfert d'appareil nécessite le serveur (mode démo hors ligne).",
+    "invites_need_server": "Les invitations nécessitent le serveur (mode démo hors ligne).",
+    "invalid_title": "Le titre doit contenir de {{min}} à {{max}} caractères.",
+    "rules_missing": "Les règles sont manquantes.",
+    "invalid_rule_text": "Texte de règle invalide.",
+    "invalid_target": "L'objectif doit être supérieur à 0.",
+    "invalid_direction": "La direction doit être plus élevée ou plus basse.",
+    "invalid_type_rules": "Type de défi ou règles invalides.",
+    "invalid_difficulty": "Difficulté invalide.",
+    "invalid_theme": "Horde ennemie invalide.",
+    "invalid_calendar": "Paramètres de calendrier invalides.",
+    "invalid_days": "La durée doit être de {{min}} à {{max}} jours.",
+    "too_many_inactive_dates": "Trop de jours de pause.",
+    "start_date_past": "La date de début est dans le passé.",
+    "challenge_not_found": "Défi introuvable.",
+    "invalid_hero_class": "Classe de héros invalide.",
+    "invite_not_found": "Code d'invitation introuvable.",
+    "season_already_started": "La saison a déjà commencé.",
+    "challenge_full": "Ce défi est complet.",
+    "invalid_event_kind": "Type d'action invalide.",
+    "payload_too_large": "Données envoyées trop volumineuses.",
+    "invalid_day": "Jour invalide.",
+    "day_not_resolved": "Ce jour n'est pas encore résolu.",
+    "day_not_started": "Ce jour n'a pas encore commencé.",
+    "day_closed": "Ce jour est clos — l'Aube est passée.",
+    "push_disabled": "Les notifications push sont désactivées sur le serveur.",
+    "invalid_endpoint": "Point de terminaison push invalide.",
+    "queued_write_dropped": "Votre {{kindLabel}} du jour {{day}} n'a pas pu être enregistré : {{reason}}",
+    "eventKind_checkin": "bilan",
+    "eventKind_orders": "plan",
+    "eventKind_hash": "vérification de synchro"
+  },
+  "skipReasons": {
+    "unknown_pad": "emplacement inconnu",
+    "not_your_pad": "pas votre emplacement",
+    "pad_occupied": "emplacement occupé",
+    "unknown_building": "bâtiment inconnu",
+    "not_enough_gold": "pas assez d'or",
+    "nothing_to_upgrade": "rien à améliorer",
+    "max_level": "niveau maximum",
+    "nothing_to_repair": "rien à réparer",
+    "not_damaged": "non endommagé",
+    "minimum_donate": "minimum {{min}} d'or",
+    "unknown_player": "joueur inconnu",
+    "unknown_sector": "secteur inconnu",
+    "unknown_stance": "posture inconnue",
+    "unknown_order": "ordre inconnu"
+  },
+  "push": {
+    "iosAddHomeScreen": "Sur iPhone, ajoutez d'abord l'application à l'écran d'accueil (Partager → Sur l'écran d'accueil), puis activez-y les notifications.",
+    "notSupported": "Les notifications ne sont pas prises en charge par ce navigateur.",
+    "needsServer": "Les notifications nécessitent le serveur.",
+    "permissionDenied": "L'autorisation de notification n'a pas été accordée."
+  }
+}

@@ -324,7 +324,10 @@ label.field {
   flex: 1;
   max-width: 140px;
   font-size: 13px;
-  padding: 0;
+  padding: 0 2px;
+  white-space: normal;
+  text-align: center;
+  line-height: 1.1;
 }
 .team {
   display: flex;
@@ -459,7 +462,8 @@ label.field {
   font-size: 22px;
   color: #fff3d0;
   text-shadow: 0 2px 8px #000, 0 0 20px rgba(255, 160, 60, 0.8);
-  white-space: nowrap;
+  max-width: 94vw;
+  white-space: normal;
   pointer-events: none;
   animation: pop 0.6s ease-out;
 }

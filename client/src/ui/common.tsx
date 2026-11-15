@@ -1,18 +1,63 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import type { ParseKeys } from 'i18next';
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { Trans, useTranslation } from 'react-i18next';
+import i18n, { LOCALE_LABELS, SUPPORTED_LOCALES, getLanguage, setLanguage, type Locale } from '../i18n';
+import { formatNumber } from '../i18n/format';
 import type { HeroClass } from '../sim/types';
 
 export const PLAYER_COLORS = [0x3d7bd9, 0xd9a23d, 0x45b35a, 0xc0443a, 0x8e5bd0, 0x2fb5b0, 0xe07ab5, 0x9a9a9a];
 export const cssColor = (c: number) => '#' + c.toString(16).padStart(6, '0');
 
-export function Icon({ id, size = 20, style }: { id: string; size?: number; style?: React.CSSProperties }) {
+const RICH_COMPONENTS = { bold: <b />, i: <i /> } as const;
+
+export function RichText({ i18nKey, values }: { i18nKey: ParseKeys; values?: Record<string, unknown> }) {
+  return <Trans i18nKey={i18nKey as never} values={values} components={RICH_COMPONENTS} />;
+}
+
+export function LanguageSelect({ compact, style }: { compact?: boolean; style?: CSSProperties }) {
+  const { t, i18n: inst } = useTranslation();
+  const current = getLanguage();
+  void inst.language;
+  return (
+    <select
+      aria-label={t('common.language')}
+      value={current}
+      onChange={(e) => void setLanguage(e.target.value as Locale)}
+      style={
+        compact
+          ? {
+              width: 'auto',
+              padding: '4px 8px',
+              fontSize: 13,
+              fontWeight: 800,
+              background: 'rgba(20, 28, 44, 0.82)',
+              color: 'var(--text)',
+              borderColor: 'rgba(244, 198, 78, 0.5)',
+              ...style,
+            }
+          : style
+      }
+    >
+      {SUPPORTED_LOCALES.map((loc) => (
+        <option key={loc} value={loc}>
+          {LOCALE_LABELS[loc]}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+export function Icon({ id, size = 20, style }: { id: string; size?: number; style?: CSSProperties }) {
   return <img className="icon" src={`/assets/icon_${id}.webp`} width={size} height={size} alt="" draggable={false} style={style} />;
 }
 
 export function Gold({ n, size = 18 }: { n: number; size?: number }) {
+  const { i18n: inst } = useTranslation();
+  void inst.language;
   return (
     <span className="cost">
       <Icon id="gold" size={size} />
-      {n}
+      {formatNumber(n)}
     </span>
   );
 }
@@ -22,6 +67,7 @@ export function portraitUrl(heroClass: HeroClass) {
 }
 
 export function Sheet({ onClose, children, wide }: { onClose: () => void; children: ReactNode; wide?: boolean }) {
+  const { t } = useTranslation();
   const downOnBackdrop = useRef(false);
   const downInSheet = useRef(false);
   const mountedAt = useRef(performance.now());
@@ -53,7 +99,7 @@ export function Sheet({ onClose, children, wide }: { onClose: () => void; childr
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        <button className="close" onClick={onClose} aria-label="close">
+        <button className="close" onClick={onClose} aria-label={t('common.close')}>
           ✕
         </button>
         {children}
@@ -73,13 +119,13 @@ export function Toast({ text, onDone }: { text: string; onDone: () => void }) {
 }
 
 export function fmtDuration(ms: number): string {
-  if (ms <= 0) return 'now';
+  if (ms <= 0) return i18n.t('common.durationNow');
   const m = Math.floor(ms / 60000);
   const h = Math.floor(m / 60);
   const d = Math.floor(h / 24);
-  if (d >= 1) return `${d}d ${h % 24}h`;
-  if (h >= 1) return `${h}h ${m % 60}m`;
-  return `${Math.max(1, m)}m`;
+  if (d >= 1) return i18n.t('common.durationDaysHours', { d, h: h % 24 });
+  if (h >= 1) return i18n.t('common.durationHoursMinutes', { h, m: m % 60 });
+  return i18n.t('common.durationMinutes', { m: Math.max(1, m) });
 }
 
 export function useNow(intervalMs = 1000, source: () => number = Date.now) {
@@ -103,24 +149,32 @@ export function Stars({ n, max = 3, size = 28 }: { n: number; max?: number; size
   );
 }
 
-export const HERO_INFO: Record<HeroClass, { name: string; text: string }> = {
-  knight: { name: 'Knight', text: 'Tough melee tank. Blocks two enemies at once.' },
-  ranger: { name: 'Ranger', text: 'Long-range archer. Shoots flyers.' },
-  priest: { name: 'Priestess', text: 'Holy magic that ignores armour and heals nearby allies.' },
-};
+const HERO_CLASSES: readonly HeroClass[] = ['knight', 'ranger', 'priest'];
+
+export function getHeroInfo(h: HeroClass): { name: string; text: string } {
+  return {
+    name: i18n.t(`heroes.${h}.name`),
+    text: i18n.t(`heroes.${h}.text`),
+  };
+}
 
 export function HeroPicker({ value, onChange }: { value: HeroClass; onChange: (h: HeroClass) => void }) {
+  const { i18n: inst } = useTranslation();
+  void inst.language;
   return (
     <div className="col" style={{ gap: 6 }}>
-      {(Object.keys(HERO_INFO) as HeroClass[]).map((h) => (
-        <button key={h} type="button" className={'option' + (value === h ? ' selected' : '')} onClick={() => onChange(h)}>
-          <img src={portraitUrl(h)} alt="" style={{ borderRadius: '50%', objectFit: 'cover', objectPosition: 'top', background: '#c9b48a' }} />
-          <div>
-            <b>{HERO_INFO[h].name}</b>
-            <div style={{ fontSize: 13 }}>{HERO_INFO[h].text}</div>
-          </div>
-        </button>
-      ))}
+      {HERO_CLASSES.map((h) => {
+        const info = getHeroInfo(h);
+        return (
+          <button key={h} type="button" className={'option' + (value === h ? ' selected' : '')} onClick={() => onChange(h)}>
+            <img src={portraitUrl(h)} alt="" style={{ borderRadius: '50%', objectFit: 'cover', objectPosition: 'top', background: '#c9b48a' }} />
+            <div>
+              <b>{info.name}</b>
+              <div style={{ fontSize: 13 }}>{info.text}</div>
+            </div>
+          </button>
+        );
+      })}
     </div>
   );
 }

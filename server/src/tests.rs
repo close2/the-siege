@@ -67,9 +67,12 @@ async fn users_auth_and_transfer() {
     let (st, _) = req(&app, "GET", "/api/me", Some("bogus"), None).await;
     assert_eq!(st, StatusCode::UNAUTHORIZED);
 
-    // Bad name -> 400
-    let (st, _) = req(&app, "POST", "/api/users", None, Some(json!({ "name": "A" }))).await;
+    // Bad name -> 400 with structured error code + params
+    let (st, bad_name) = req(&app, "POST", "/api/users", None, Some(json!({ "name": "A" }))).await;
     assert_eq!(st, StatusCode::BAD_REQUEST);
+    assert_eq!(bad_name["code"], "invalid_name");
+    assert_eq!(bad_name["params"]["min"], 2);
+    assert_eq!(bad_name["params"]["max"], 24);
 
     // Create user
     let (st, u1) = req(&app, "POST", "/api/users", None, Some(json!({ "name": "Anna" }))).await;
@@ -315,6 +318,9 @@ async fn scheduler_reminders_and_dawn_dedup() {
     assert_eq!(jobs[0].user_id, uid2);
     assert_eq!(jobs[0].kind, "remind");
     assert_eq!(jobs[0].day, 1);
+    assert_eq!(jobs[0].payload["kind"], "remind");
+    assert_eq!(jobs[0].payload["day"], 1);
+    assert_eq!(jobs[0].payload["challengeTitle"], "No Sugar Siege");
 
     // Second pass at 20:06 UTC -> deduplicated (0 jobs)
     let jobs_again = crate::scheduler::collect_at(&state, evening + 60_000).unwrap();

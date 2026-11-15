@@ -1,9 +1,11 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Backend, User } from '../net/types';
-import { Sheet } from './common';
+import { LanguageSelect, Sheet } from './common';
 import { TutorialContent } from './Tutorial';
 
 export function Onboarding({ backend, onDone }: { backend: Backend; onDone: (u: User) => void }) {
+  const { t } = useTranslation();
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
   const [mode, setMode] = useState<'new' | 'code'>('new');
@@ -26,52 +28,55 @@ export function Onboarding({ backend, onDone }: { backend: Backend; onDone: (u: 
 
   return (
     <div className="screen bg-art" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', minHeight: '100vh' }}>
-      <div className="center" style={{ marginBottom: 'auto', paddingTop: '8vh' }}>
-        <h1 style={{ fontSize: 44, textShadow: '0 4px 16px #000' }}>The Siege</h1>
-        <div style={{ fontWeight: 700, textShadow: '0 2px 6px #000' }}>Keep your habits. Hold the line. Together.</div>
+      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <LanguageSelect compact />
+      </div>
+      <div className="center" style={{ marginBottom: 'auto', paddingTop: '5vh' }}>
+        <h1 style={{ fontSize: 44, textShadow: '0 4px 16px #000' }}>{t('app.title')}</h1>
+        <div style={{ fontWeight: 700, textShadow: '0 2px 6px #000' }}>{t('app.tagline')}</div>
       </div>
       <form className="panel col" onSubmit={submit}>
         {mode === 'new' ? (
           <>
-            <h2>Who are you, defender?</h2>
+            <h2>{t('onboarding.whoAreYou')}</h2>
             <label className="field">
-              Your name
-              <input value={name} onChange={(e) => setName(e.target.value)} maxLength={24} placeholder="e.g. Anna" autoFocus />
+              {t('onboarding.yourName')}
+              <input value={name} onChange={(e) => setName(e.target.value)} maxLength={24} placeholder={t('onboarding.namePlaceholder')} autoFocus />
             </label>
             <button className="btn gold block" disabled={busy || name.trim().length < 2}>
-              Begin
+              {t('onboarding.begin')}
             </button>
             <button type="button" className="linkbtn" style={{ color: '#7a4a10' }} onClick={() => setShowTutorial(true)}>
-              📖 New here? How The Siege works
+              {t('onboarding.howItWorks')}
             </button>
             {backend.mode === 'http' && (
               <button type="button" className="linkbtn" style={{ color: '#7a4a10' }} onClick={() => setMode('code')}>
-                I already play on another device
+                {t('onboarding.otherDeviceLink')}
               </button>
             )}
           </>
         ) : (
           <>
-            <h2>Use another device</h2>
-            <div className="muted">On your other device open Settings → "Use on another device" and enter the code here.</div>
+            <h2>{t('onboarding.otherDeviceTitle')}</h2>
+            <div className="muted">{t('onboarding.otherDeviceHint')}</div>
             <label className="field">
-              Transfer code
-              <input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} maxLength={6} placeholder="ABC123" autoFocus />
+              {t('onboarding.transferCode')}
+              <input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} maxLength={6} placeholder={t('onboarding.codePlaceholder')} autoFocus />
             </label>
             <button className="btn gold block" disabled={busy || code.length !== 6}>
-              Continue
+              {t('onboarding.continue')}
             </button>
             <button type="button" className="linkbtn" style={{ color: '#7a4a10' }} onClick={() => setMode('new')}>
-              Back
+              {t('common.backSimple')}
             </button>
           </>
         )}
         {error && <div className="error">{error}</div>}
-        {backend.mode === 'local' && <div className="muted" style={{ fontSize: 12 }}>Offline demo mode: progress is stored on this device; teammates are bots.</div>}
+        {backend.mode === 'local' && <div className="muted" style={{ fontSize: 12 }}>{t('onboarding.offlineNote')}</div>}
       </form>
       {showTutorial && (
         <Sheet wide onClose={() => setShowTutorial(false)}>
-          <h2>How to Play</h2>
+          <h2>{t('onboarding.howToPlay')}</h2>
           <TutorialContent />
         </Sheet>
       )}

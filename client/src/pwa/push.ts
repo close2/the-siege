@@ -1,4 +1,5 @@
 // Web Push subscription helpers (VAPID). Works when the PWA's service worker is active.
+import i18n from '../i18n';
 import type { Backend } from '../net/types';
 
 function b64ToUint8(b64: string): Uint8Array {
@@ -26,11 +27,11 @@ export async function currentSubscription(): Promise<PushSubscription | null> {
 }
 
 export async function enablePush(backend: Backend): Promise<void> {
-  if (!pushSupported()) throw new Error(isIos() && !isStandalone() ? 'On iPhone, first add the app to your home screen (Share → Add to Home Screen), then enable notifications there.' : 'Notifications are not supported in this browser.');
+  if (!pushSupported()) throw new Error(isIos() && !isStandalone() ? i18n.t('push.iosAddHomeScreen') : i18n.t('push.notSupported'));
   const key = await backend.pushKey();
-  if (!key) throw new Error('Notifications need the server.');
+  if (!key) throw new Error(i18n.t('push.needsServer'));
   const perm = await Notification.requestPermission();
-  if (perm !== 'granted') throw new Error('Notification permission was not granted.');
+  if (perm !== 'granted') throw new Error(i18n.t('push.permissionDenied'));
   const reg = await navigator.serviceWorker.ready;
   const sub = (await reg.pushManager.getSubscription()) ?? (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToUint8(key) as BufferSource }));
   await backend.pushSubscribe(sub.toJSON());

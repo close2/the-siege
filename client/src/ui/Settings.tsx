@@ -1,18 +1,12 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useApp } from '../App';
 import { currentSubscription, disablePush, enablePush, pushSupported } from '../pwa/push';
 import { sound } from '../render/Sound';
-import { useNow } from './common';
-
-function fmtCountdown(ms: number): string {
-  if (ms <= 0) return 'expired';
-  const totalSec = Math.ceil(ms / 1000);
-  const m = Math.floor(totalSec / 60);
-  const s = totalSec % 60;
-  return `${m}:${String(s).padStart(2, '0')}`;
-}
+import { LanguageSelect, useNow } from './common';
 
 export function Settings() {
+  const { t } = useTranslation();
   const { backend, user, setUser, navigate } = useApp();
   const [name, setName] = useState(user.name);
   const [code, setCode] = useState<{ code: string; expiresAt: number } | null>(null);
@@ -26,6 +20,14 @@ export function Settings() {
   useEffect(() => {
     currentSubscription().then((s) => setPushOn(!!s));
   }, []);
+
+  const fmtCountdown = (ms: number): string => {
+    if (ms <= 0) return t('settings.transferExpired');
+    const totalSec = Math.ceil(ms / 1000);
+    const m = Math.floor(totalSec / 60);
+    const s = totalSec % 60;
+    return `${m}:${String(s).padStart(2, '0')}`;
+  };
 
   const run = async (f: () => Promise<void>) => {
     setError(null);
@@ -41,17 +43,17 @@ export function Settings() {
     <div className="screen bg-art col">
       <div className="row">
         <button className="btn small" onClick={() => navigate('/')}>
-          ‹ Home
+          {t('common.home')}
         </button>
         <h2 className="grow" style={{ margin: 0 }}>
-          Settings
+          {t('settings.title')}
         </h2>
       </div>
       {error && <div className="error">{error}</div>}
       {msg && <div className="chip">{msg}</div>}
 
       <div className="panel col">
-        <h3>Your name</h3>
+        <h3>{t('settings.yourName')}</h3>
         <div className="row">
           <input value={name} onChange={(e) => setName(e.target.value)} maxLength={24} />
           <button
@@ -61,17 +63,22 @@ export function Settings() {
               run(async () => {
                 await backend.rename(name.trim());
                 setUser({ ...user, name: name.trim() });
-                setMsg('Saved');
+                setMsg(t('common.saved'));
               })
             }
           >
-            Save
+            {t('common.save')}
           </button>
         </div>
       </div>
 
       <div className="panel col">
-        <h3>Sound & notifications</h3>
+        <h3>{t('settings.languageTitle')}</h3>
+        <LanguageSelect />
+      </div>
+
+      <div className="panel col">
+        <h3>{t('settings.soundAndNotifications')}</h3>
         <label className="row" style={{ fontWeight: 700 }}>
           <input
             type="checkbox"
@@ -83,7 +90,7 @@ export function Settings() {
               if (e.target.checked) sound.play('coin');
             }}
           />
-          Sound effects
+          {t('settings.soundEffects')}
         </label>
         <label className="row" style={{ fontWeight: 700 }}>
           <input
@@ -96,7 +103,7 @@ export function Settings() {
                 if (e.target.checked) {
                   await enablePush(backend);
                   setPushOn(true);
-                  setMsg('Notifications on');
+                  setMsg(t('settings.notificationsOn'));
                 } else {
                   await disablePush(backend);
                   setPushOn(false);
@@ -104,30 +111,30 @@ export function Settings() {
               })
             }
           />
-          Reminders & Dawn notifications
+          {t('settings.remindersAndDawn')}
         </label>
-        {!pushSupported() && <div className="muted" style={{ fontSize: 13 }}>Not supported in this browser. On iPhone: add the app to the home screen first.</div>}
+        {!pushSupported() && <div className="muted" style={{ fontSize: 13 }}>{t('settings.pushUnsupportedHint')}</div>}
       </div>
 
       {backend.mode === 'http' && (
         <div className="panel col">
-          <h3>Use on another device</h3>
-          <div style={{ fontSize: 14 }}>Generate a code and enter it on the other device ("I already play on another device" or below).</div>
+          <h3>{t('settings.otherDeviceTitle')}</h3>
+          <div style={{ fontSize: 14 }}>{t('settings.otherDeviceInstructions')}</div>
           {code && code.expiresAt > now ? (
             <div className="center">
               <div className="title selectable" style={{ fontSize: 34, letterSpacing: '0.2em' }}>
                 {code.code}
               </div>
-              <div className="muted">valid for {fmtCountdown(code.expiresAt - now)}</div>
+              <div className="muted">{t('settings.validFor', { time: fmtCountdown(code.expiresAt - now) })}</div>
             </div>
           ) : (
             <button className="btn" onClick={() => run(async () => setCode(await backend.transferCode()))}>
-              Show transfer code
+              {t('settings.showTransferCode')}
             </button>
           )}
-          <div style={{ fontSize: 14, marginTop: 6 }}>Or use a code from another device:</div>
+          <div style={{ fontSize: 14, marginTop: 6 }}>{t('settings.useCodeFromOther')}</div>
           <div className="row">
-            <input value={claimCode} onChange={(e) => setClaimCode(e.target.value.toUpperCase())} maxLength={6} placeholder="ABC123" />
+            <input value={claimCode} onChange={(e) => setClaimCode(e.target.value.toUpperCase())} maxLength={6} placeholder={t('onboarding.codePlaceholder')} />
             <button
               className="btn small"
               disabled={claimCode.trim().length !== 6}
@@ -137,26 +144,26 @@ export function Settings() {
                   setUser(u);
                   setName(u.name);
                   setClaimCode('');
-                  setMsg(`Switched to ${u.name}`);
+                  setMsg(t('settings.switchedTo', { name: u.name }));
                 })
               }
             >
-              Use code
+              {t('settings.useCode')}
             </button>
           </div>
         </div>
       )}
 
       <div className="panel col">
-        <h3>About</h3>
+        <h3>{t('settings.about')}</h3>
         <div style={{ fontSize: 14 }}>
-          Mode: <b>{backend.mode === 'http' ? 'Online' : 'Offline demo (this device only)'}</b>
+          {t('settings.modeLabel')} <b>{backend.mode === 'http' ? t('settings.modeOnline') : t('settings.modeOffline')}</b>
         </div>
         {backend.mode === 'local' && (
           <button
             className="btn small"
             onClick={() => {
-              if (confirm('Delete all local demo data?')) {
+              if (confirm(t('settings.confirmReset'))) {
                 localStorage.removeItem('siege.local.v1');
                 try {
                   indexedDB.deleteDatabase('siege-local');
@@ -167,7 +174,7 @@ export function Settings() {
               }
             }}
           >
-            Reset demo data
+            {t('settings.resetDemoData')}
           </button>
         )}
       </div>

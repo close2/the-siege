@@ -20,25 +20,41 @@ const MAX_PAYLOAD: usize = 8 * 1024;
 const THEMES: &[&str] = &["sugar"];
 const CODE_CHARS: &[u8] = b"ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
-pub struct ApiError(pub StatusCode, pub String);
+pub struct ApiError {
+    pub status: StatusCode,
+    pub code: &'static str,
+    pub message: String,
+    pub params: Option<Value>,
+}
 
 impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
-        (self.0, Json(json!({ "error": self.1 }))).into_response()
+        let mut body = json!({
+            "error": self.message,
+            "code": self.code,
+        });
+        if let Some(p) = self.params {
+            body["params"] = p;
+        }
+        (self.status, Json(body)).into_response()
     }
 }
 
 impl From<rusqlite::Error> for ApiError {
     fn from(e: rusqlite::Error) -> Self {
         tracing::error!("db error: {e}");
-        ApiError(StatusCode::INTERNAL_SERVER_ERROR, "database error".into())
+        err(StatusCode::INTERNAL_SERVER_ERROR, "database_error", "database error")
     }
 }
 
 type ApiResult<T> = Result<T, ApiError>;
 
-fn err(code: StatusCode, msg: &str) -> ApiError {
-    ApiError(code, msg.to_string())
+fn err(status: StatusCode, code: &'static str, msg: &str) -> ApiError {
+    ApiError { status, code, message: msg.to_string(), params: None }
+}
+
+fn err_params(status: StatusCode, code: &'static str, msg: &str, params: Value) -> ApiError {
+    ApiError { status, code, message: msg.to_string(), params: Some(params) }
 }
 
 pub fn now_ms() -> i64 {
@@ -72,14 +88,14 @@ impl FromRequestParts<AppState> for AuthUser {
 
     async fn from_request_parts(parts: &mut Parts, state: &AppState) -> Result<Self, Self::Rejection> {
         let header = parts.headers.get("authorization").and_then(|h| h.to_str().ok()).unwrap_or("");
-        let token = header.strip_prefix("Bearer ").ok_or_else(|| err(StatusCode::UNAUTHORIZED, "missing token"))?;
+        let token = header.strip_prefix("Bearer ").ok_or_else(|| err(StatusCode::UNAUTHORIZED, "missing_token", "missing token"))?;
         let db = state.db.lock().unwrap();
         let row = db
             .query_row("SELECT u.id, u.name FROM tokens t JOIN users u ON u.id = t.user_id WHERE t.token_hash = ?1", params![hash_token(token)], |r| {
                 Ok(AuthUser { id: r.get(0)?, name: r.get(1)? })
             })
             .optional()?;
-        row.ok_or_else(|| err(StatusCode::UNAUTHORIZED, "invalid token"))
+        row.ok_or_else(|| err(StatusCode::UNAUTHORIZED, "invalid_token", "invalid token"))
     }
 }
 
@@ -96,7 +112,7 @@ fn issue_token(db: &rusqlite::Connection, user_id: &str) -> ApiResult<String> {
 fn clean_name(n: &str) -> ApiResult<String> {
     let n = n.trim();
     if n.chars().count() < 2 || n.chars().count() > 24 {
-        return Err(err(StatusCode::BAD_REQUEST, "name must be 2–24 characters"));
+        return Err(err_params(StatusCode::BAD_REQUEST, "invalid_name", "name must be 2–24 characters", json!({ "min": 2, "max": 24 })));
     }
     Ok(n.to_string())
 }
@@ -182,7 +198,7 @@ async fn claim(State(s): State<AppState>, Json(b): Json<CodeBody>) -> ApiResult<
             |r| Ok((r.get(0)?, r.get(1)?)),
         )
         .optional()?;
-    let (user_id, name) = row.ok_or_else(|| err(StatusCode::NOT_FOUND, "code invalid or expired"))?;
+    let (user_id, name) = row.ok_or_else(|| err(StatusCode::NOT_FOUND, "invalid_transfer_code", "code invalid or expired"))?;
     tx.execute("DELETE FROM transfer_codes WHERE code = ?1", params![code])?;
     let token = issue_token(&tx, &user_id)?;
     tx.commit()?;
@@ -192,15 +208,15 @@ async fn claim(State(s): State<AppState>, Json(b): Json<CodeBody>) -> ApiResult<
 // ---------- challenges ----------
 
 fn validate_config(c: &Value, now: i64) -> ApiResult<calendar::CalConfig> {
-    let bad = |m: &str| err(StatusCode::BAD_REQUEST, m);
+    let bad = |code: &'static str, m: &str| err(StatusCode::BAD_REQUEST, code, m);
     let title = c.get("title").and_then(|v| v.as_str()).unwrap_or("").trim().to_string();
     if title.chars().count() < 2 || title.chars().count() > 60 {
-        return Err(bad("title must be 2–60 characters"));
+        return Err(err_params(StatusCode::BAD_REQUEST, "invalid_title", "title must be 2–60 characters", json!({ "min": 2, "max": 60 })));
     }
     let typ = c.get("type").and_then(|v| v.as_str()).unwrap_or("");
-    let rules = c.get("rules").and_then(|v| v.as_array()).ok_or_else(|| bad("rules missing"))?;
+    let rules = c.get("rules").and_then(|v| v.as_array()).ok_or_else(|| bad("rules_missing", "rules missing"))?;
     if rules.iter().any(|r| r.as_str().map(|s| s.trim().is_empty() || s.len() > 120).unwrap_or(true)) {
-        return Err(bad("invalid rule text"));
+        return Err(bad("invalid_rule_text", "invalid rule text"));
     }
     match typ {
         "binary" if rules.len() == 1 => {}
@@ -208,32 +224,32 @@ fn validate_config(c: &Value, now: i64) -> ApiResult<calendar::CalConfig> {
         "numeric" if rules.is_empty() => {
             let t = c.get("target").and_then(|v| v.as_f64()).unwrap_or(0.0);
             if t <= 0.0 || !t.is_finite() {
-                return Err(bad("target must be > 0"));
+                return Err(bad("invalid_target", "target must be > 0"));
             }
             match c.get("direction").and_then(|v| v.as_str()) {
                 Some("higher") | Some("lower") => {}
-                _ => return Err(bad("direction must be higher or lower")),
+                _ => return Err(bad("invalid_direction", "direction must be higher or lower")),
             }
         }
-        _ => return Err(bad("invalid type / rules")),
+        _ => return Err(bad("invalid_type_rules", "invalid type / rules")),
     }
     match c.get("difficulty").and_then(|v| v.as_str()) {
         Some("very_easy") | Some("easy") | Some("normal") | Some("hard") => {}
-        _ => return Err(bad("invalid difficulty")),
+        _ => return Err(bad("invalid_difficulty", "invalid difficulty")),
     }
     if !c.get("theme").and_then(|v| v.as_str()).is_some_and(|t| THEMES.contains(&t)) {
-        return Err(bad("invalid theme"));
+        return Err(bad("invalid_theme", "invalid theme"));
     }
-    let cal = calendar::parse_config(c).map_err(|e| bad(&e))?;
+    let cal = calendar::parse_config(c).map_err(|e| bad("invalid_calendar", &e))?;
     if !(7..=90).contains(&cal.days) {
-        return Err(bad("days must be 7–90"));
+        return Err(err_params(StatusCode::BAD_REQUEST, "invalid_days", "days must be 7–90", json!({ "min": 7, "max": 90 })));
     }
     if cal.inactive.len() > 90 {
-        return Err(bad("too many inactive dates"));
+        return Err(bad("too_many_inactive_dates", "too many inactive dates"));
     }
     let today = calendar::local_date(now, cal.tz);
     if cal.start_date < today {
-        return Err(bad("start date is in the past"));
+        return Err(bad("start_date_past", "start date is in the past"));
     }
     Ok(cal)
 }
@@ -244,7 +260,7 @@ fn challenge_json(db: &rusqlite::Connection, id: &str) -> ApiResult<Value> {
             Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, i64>(2)?, r.get::<_, String>(3)?, r.get::<_, String>(4)?))
         })
         .optional()?
-        .ok_or_else(|| err(StatusCode::NOT_FOUND, "challenge not found"))?;
+        .ok_or_else(|| err(StatusCode::NOT_FOUND, "challenge_not_found", "challenge not found"))?;
     let mut stmt = db.prepare(
         "SELECT m.user_id, u.name, m.hero_class, m.join_order FROM members m JOIN users u ON u.id = m.user_id WHERE m.challenge_id = ?1 ORDER BY m.join_order",
     )?;
@@ -264,7 +280,7 @@ fn is_member(db: &rusqlite::Connection, cid: &str, uid: &str) -> ApiResult<bool>
 fn valid_hero(h: &str) -> ApiResult<()> {
     match h {
         "knight" | "ranger" | "priest" => Ok(()),
-        _ => Err(err(StatusCode::BAD_REQUEST, "invalid hero class")),
+        _ => Err(err(StatusCode::BAD_REQUEST, "invalid_hero_class", "invalid hero class")),
     }
 }
 
@@ -320,7 +336,7 @@ async fn by_invite(State(s): State<AppState>, Path(code): Path<String>) -> ApiRe
             |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, String>(2)?, r.get::<_, i64>(3)?)),
         )
         .optional()?
-        .ok_or_else(|| err(StatusCode::NOT_FOUND, "invite code not found"))?;
+        .ok_or_else(|| err(StatusCode::NOT_FOUND, "invite_not_found", "invite code not found"))?;
     let config: Value = serde_json::from_str(&row.1).unwrap_or(Value::Null);
     let joinable = !started(&config, now_ms()) && row.3 < MAX_MEMBERS;
     Ok(Json(json!({
@@ -343,17 +359,17 @@ async fn join(State(s): State<AppState>, u: AuthUser, Json(b): Json<JoinBody>) -
     let (cid, cfg): (String, String) = tx
         .query_row("SELECT id, config_json FROM challenges WHERE invite_code = ?1", params![b.invite_code.to_uppercase()], |r| Ok((r.get(0)?, r.get(1)?)))
         .optional()?
-        .ok_or_else(|| err(StatusCode::NOT_FOUND, "invite code not found"))?;
+        .ok_or_else(|| err(StatusCode::NOT_FOUND, "invite_not_found", "invite code not found"))?;
     if is_member(&tx, &cid, &u.id)? {
         return Ok(Json(challenge_json(&tx, &cid)?));
     }
     let config: Value = serde_json::from_str(&cfg).unwrap_or(Value::Null);
     if started(&config, now_ms()) {
-        return Err(err(StatusCode::CONFLICT, "the season has already started"));
+        return Err(err(StatusCode::CONFLICT, "season_already_started", "the season has already started"));
     }
     let count: i64 = tx.query_row("SELECT COUNT(*) FROM members WHERE challenge_id = ?1", params![cid], |r| r.get(0))?;
     if count >= MAX_MEMBERS {
-        return Err(err(StatusCode::CONFLICT, "this challenge is full"));
+        return Err(err(StatusCode::CONFLICT, "challenge_full", "this challenge is full"));
     }
     let order: i64 = tx.query_row("SELECT COALESCE(MAX(join_order), -1) + 1 FROM members WHERE challenge_id = ?1", params![cid], |r| r.get(0))?;
     tx.execute(
@@ -367,7 +383,7 @@ async fn join(State(s): State<AppState>, u: AuthUser, Json(b): Json<JoinBody>) -
 async fn get_challenge(State(s): State<AppState>, u: AuthUser, Path(id): Path<String>) -> ApiResult<Json<Value>> {
     let db = s.db.lock().unwrap();
     if !is_member(&db, &id, &u.id)? {
-        return Err(err(StatusCode::NOT_FOUND, "challenge not found"));
+        return Err(err(StatusCode::NOT_FOUND, "challenge_not_found", "challenge not found"));
     }
     let mut v = challenge_json(&db, &id)?;
     v["now"] = json!(now_ms());
@@ -386,31 +402,31 @@ async fn put_event(
     Json(b): Json<EventBody>,
 ) -> ApiResult<Json<Value>> {
     if !matches!(kind.as_str(), "checkin" | "orders" | "hash") {
-        return Err(err(StatusCode::BAD_REQUEST, "invalid kind"));
+        return Err(err(StatusCode::BAD_REQUEST, "invalid_event_kind", "invalid kind"));
     }
     let payload = b.payload.to_string();
     if payload.len() > MAX_PAYLOAD {
-        return Err(err(StatusCode::PAYLOAD_TOO_LARGE, "payload too large"));
+        return Err(err(StatusCode::PAYLOAD_TOO_LARGE, "payload_too_large", "payload too large"));
     }
     let db = s.db.lock().unwrap();
     let tx = db.unchecked_transaction()?;
     if !is_member(&tx, &id, &u.id)? {
-        return Err(err(StatusCode::NOT_FOUND, "challenge not found"));
+        return Err(err(StatusCode::NOT_FOUND, "challenge_not_found", "challenge not found"));
     }
     let cfg: String = tx.query_row("SELECT config_json FROM challenges WHERE id = ?1", params![id], |r| r.get(0))?;
     let cfg: Value = serde_json::from_str(&cfg).unwrap_or(Value::Null);
-    let cal = calendar::parse_config(&cfg).map_err(|e| err(StatusCode::INTERNAL_SERVER_ERROR, &e))?;
+    let cal = calendar::parse_config(&cfg).map_err(|e| err(StatusCode::INTERNAL_SERVER_ERROR, "invalid_calendar", &e))?;
     let windows = calendar::day_windows(&cal);
-    let w = windows.get(day.wrapping_sub(1) as usize).ok_or_else(|| err(StatusCode::BAD_REQUEST, "invalid day"))?;
+    let w = windows.get(day.wrapping_sub(1) as usize).ok_or_else(|| err(StatusCode::BAD_REQUEST, "invalid_day", "invalid day"))?;
     let now = now_ms();
     if kind == "hash" {
         if now < w.dawn {
-            return Err(err(StatusCode::CONFLICT, "day not resolved yet"));
+            return Err(err(StatusCode::CONFLICT, "day_not_resolved", "day not resolved yet"));
         }
     } else if now < w.open {
-        return Err(err(StatusCode::CONFLICT, "this day has not started yet"));
+        return Err(err(StatusCode::CONFLICT, "day_not_started", "this day has not started yet"));
     } else if now >= w.dawn {
-        return Err(err(StatusCode::CONFLICT, "this day is closed — Dawn has passed"));
+        return Err(err(StatusCode::CONFLICT, "day_closed", "this day is closed — Dawn has passed"));
     }
     tx.execute("DELETE FROM events WHERE challenge_id = ?1 AND day = ?2 AND user_id = ?3 AND kind = ?4", params![id, day, u.id, kind])?;
     tx.execute(
@@ -430,7 +446,7 @@ struct SinceQuery {
 async fn events(State(s): State<AppState>, u: AuthUser, Path(id): Path<String>, Query(q): Query<SinceQuery>) -> ApiResult<Json<Value>> {
     let db = s.db.lock().unwrap();
     if !is_member(&db, &id, &u.id)? {
-        return Err(err(StatusCode::NOT_FOUND, "challenge not found"));
+        return Err(err(StatusCode::NOT_FOUND, "challenge_not_found", "challenge not found"));
     }
     let mut stmt = db.prepare("SELECT seq, day, user_id, kind, payload_json, updated_at FROM events WHERE challenge_id = ?1 AND seq > ?2 ORDER BY seq")?;
     let list: Vec<Value> = stmt
@@ -450,7 +466,7 @@ async fn events(State(s): State<AppState>, u: AuthUser, Path(id): Path<String>, 
 async fn push_key(State(s): State<AppState>) -> ApiResult<Json<Value>> {
     match &s.push {
         Some(p) => Ok(Json(json!({ "publicKey": p.public_key }))),
-        None => Err(err(StatusCode::NOT_FOUND, "push disabled")),
+        None => Err(err(StatusCode::NOT_FOUND, "push_disabled", "push disabled")),
     }
 }
 
@@ -468,7 +484,7 @@ struct SubBody {
 
 async fn push_subscribe(State(s): State<AppState>, u: AuthUser, Json(b): Json<SubBody>) -> ApiResult<StatusCode> {
     if !b.endpoint.starts_with("https://") || b.endpoint.len() > 1000 {
-        return Err(err(StatusCode::BAD_REQUEST, "invalid endpoint"));
+        return Err(err(StatusCode::BAD_REQUEST, "invalid_endpoint", "invalid endpoint"));
     }
     s.db.lock().unwrap().execute(
         "INSERT OR REPLACE INTO push_subs (endpoint, user_id, p256dh, auth) VALUES (?1, ?2, ?3, ?4)",

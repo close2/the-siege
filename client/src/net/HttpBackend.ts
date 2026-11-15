@@ -1,4 +1,5 @@
 // Backend talking to the Rust server (same origin, /api).
+import { translateQueuedDrop } from '../i18n/format';
 import type { ChallengeConfig, HeroClass } from '../sim/types';
 import { LocalBackend } from './LocalBackend';
 import { ApiError, DRY_RUN_ID, type Backend, type Challenge, type ChallengeSummary, type EventKind, type GameEvent, type User } from './types';
@@ -53,16 +54,21 @@ export class HttpBackend implements Backend {
     try {
       res = await fetch(path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
     } catch {
-      throw new ApiError(0, 'Network error — are you offline?');
+      throw ApiError.fromCode(0, 'network_offline');
     }
     if (!res.ok) {
       let msg = res.statusText;
+      let code: string | undefined;
+      let params: Record<string, unknown> | undefined;
       try {
-        msg = ((await res.json()) as { error?: string }).error ?? msg;
+        const data = (await res.json()) as { error?: string; code?: string; params?: Record<string, unknown> };
+        msg = data.error ?? msg;
+        code = data.code;
+        params = data.params;
       } catch {
         /* ignore */
       }
-      throw new ApiError(res.status, msg);
+      throw code ? ApiError.fromCode(res.status, code, params, msg) : new ApiError(res.status, msg);
     }
     if (res.status === 204) return undefined as T;
     return (await res.json()) as T;
@@ -192,7 +198,7 @@ export class HttpBackend implements Backend {
       } catch (e) {
         if (e instanceof ApiError && e.status === 0) continue;
         done.add(p);
-        dropped.push(`Your ${p.kind} for day ${p.day} could not be saved: ${(e as Error).message}`);
+        dropped.push(translateQueuedDrop(p.kind, p.day, (e as Error).message));
       }
     }
     // keep entries that failed with a network error, plus anything enqueued while flushing

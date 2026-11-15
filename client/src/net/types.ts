@@ -1,3 +1,4 @@
+import { translateApiError } from '../i18n/format';
 import type { ChallengeConfig, HeroClass } from '../sim/types';
 
 export interface User {
@@ -49,8 +50,14 @@ export class ApiError extends Error {
   constructor(
     readonly status: number,
     message: string,
+    readonly code?: string,
+    readonly params?: Record<string, unknown>,
   ) {
     super(message);
+  }
+
+  static fromCode(status: number, code: string, params?: Record<string, unknown>, fallback?: string): ApiError {
+    return new ApiError(status, translateApiError(code, params, fallback), code, params);
   }
 }
 

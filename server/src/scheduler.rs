@@ -88,9 +88,23 @@ pub(crate) fn collect_at(state: &AppState, now: i64) -> anyhow::Result<Vec<Job>>
                     params![cid, uid, w.day, kind],
                 )?;
                 let payload = if kind == "dawn" {
-                    json!({ "title": format!("☀ Dawn {} — {}", w.day, title), "body": "The battle has been fought. See how your sector held!", "url": format!("/c/{cid}") })
+                    json!({
+                        "kind": "dawn",
+                        "day": w.day,
+                        "challengeTitle": title,
+                        "title": format!("☀ Dawn {} — {}", w.day, title),
+                        "body": "The battle has been fought. See how your sector held!",
+                        "url": format!("/c/{cid}")
+                    })
                 } else {
-                    json!({ "title": format!("{} — your sector needs you", title), "body": format!("Report day {} before Dawn to earn gold and send your hero.", w.day), "url": format!("/c/{cid}") })
+                    json!({
+                        "kind": "remind",
+                        "day": w.day,
+                        "challengeTitle": title,
+                        "title": format!("{} — your sector needs you", title),
+                        "body": format!("Report day {} before Dawn to earn gold and send your hero.", w.day),
+                        "url": format!("/c/{cid}")
+                    })
                 };
                 jobs.push(Job { challenge_id: cid.clone(), user_id: uid.clone(), day: w.day, kind, payload });
             }

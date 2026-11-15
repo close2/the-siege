@@ -1,33 +1,48 @@
 import { useState } from 'react';
-import { BUILD_COST, BUILDING_HP, ENEMIES, HEROES, TOWERS, BARRACKS, ECON, KEEP } from '../content/stats';
+import { useTranslation } from 'react-i18next';
 import { enemyArtId } from '../content/artSpec';
+import { BARRACKS, BUILD_COST, BUILDING_HP, ECON, ENEMIES, HEROES, KEEP, TOWERS } from '../content/stats';
 import { getTheme } from '../content/themes';
-import { ratio, dayGold, heroLevel } from '../sim/economy';
+import i18n from '../i18n';
+import { formatNumber, formatWeekdayDate, translateSkipReason } from '../i18n/format';
+import { dayGold, heroLevel, ratio } from '../sim/economy';
 import { padById, padRange, sectorById, sectorsPerPlayer } from '../sim/map';
 import { repairCost, upgradeCost } from '../sim/orders';
 import { seasonRank } from '../sim/season';
 import type { BuildingType, Checkin, DayReport, Dir, EnemyRole, Order, PadId, PlayerId } from '../sim/types';
 import { DIRS } from '../sim/types';
 import type { SeasonView } from '../state/useSeason';
-import { Gold, HERO_INFO, Icon, Sheet, Stars, cssColor, portraitUrl, PLAYER_COLORS } from './common';
+import { Gold, Icon, PLAYER_COLORS, RichText, Sheet, Stars, cssColor, getHeroInfo, portraitUrl } from './common';
 
-const BUILDING_INFO: Record<BuildingType, { name: string; text: string; icons: string[] }> = {
-  archer: { name: 'Archer Tower', text: 'Fast arrows. Hits flyers.', icons: ['physical', 'flying'] },
-  barracks: { name: 'Barracks', text: 'Soldiers block the road.', icons: ['armor'] },
-  mage: { name: 'Mage Tower', text: 'Magic bolts pierce armour.', icons: ['magic', 'flying'] },
-  catapult: { name: 'Catapult', text: 'Slow, heavy splash. Ground only.', icons: ['siege'] },
+const BUILDING_TYPES: readonly BuildingType[] = ['archer', 'barracks', 'mage', 'catapult'];
+
+const BUILDING_ICONS: Record<BuildingType, string[]> = {
+  archer: ['physical', 'flying'],
+  barracks: ['armor'],
+  mage: ['magic', 'flying'],
+  catapult: ['siege'],
 };
 
-export const ROAD_NAME: Record<Dir, string> = { N: 'North-west road', E: 'North-east road', S: 'South-east road', W: 'South-west road' };
+export function getBuildingInfo(type: BuildingType): { name: string; text: string; icons: string[] } {
+  return {
+    name: i18n.t(`buildings.${type}.name`),
+    text: i18n.t(`buildings.${type}.text`),
+    icons: BUILDING_ICONS[type],
+  };
+}
+
+export function getRoadName(d: Dir): string {
+  return i18n.t(`roads.${d}`);
+}
 
 function enemyImg(theme: string, role: EnemyRole) {
   return `/assets/${enemyArtId(theme, role)}.webp`;
 }
 
 function towerLine(type: BuildingType, level: number, ranges?: Record<string, number>) {
-  if (type === 'barracks') return `${BARRACKS.soldiers[level - 1]} soldiers · ${BARRACKS.hp[level - 1]} HP each`;
-  const t = TOWERS[type];
-  return `${t.dmg[level - 1]} dmg · range ${padRange(ranges, t.range[level - 1])}`;
+  if (type === 'barracks') return i18n.t('build.barracksLine', { soldiers: BARRACKS.soldiers[level - 1], hp: BARRACKS.hp[level - 1] });
+  const tw = TOWERS[type];
+  return i18n.t('build.towerLine', { dmg: tw.dmg[level - 1], range: padRange(ranges, tw.range[level - 1]) });
 }
 
 /** effective tower range on a pad (fairness table, see PadDef.ranges); null for barracks */
@@ -36,15 +51,10 @@ export function towerRange(view: SeasonView, padId: PadId, type: BuildingType, l
   return padRange(padById(view.setup.map, padId)?.pad.ranges, TOWERS[type].range[level - 1]);
 }
 
-const STANCE_HELP = {
-  own: 'Your hero guards the rally point of your first sector and fights enemies walking past.',
-  keep: 'Last line of defence: your hero stands at the Keep and engages anything that reaches the end of any road (wider reach than usual).',
-  neighbor: "Your hero fights in a teammate's sector instead of your own — useful when their road faces a heavy wave or the Boss.",
-} as const;
-
 // ---------------------------------------------------------------------------
 
 export function CheckInSheet({ view, onSave, onClose }: { view: SeasonView; onSave: (day: number, c: Checkin) => Promise<void>; onClose: () => void }) {
+  const { t } = useTranslation();
   const cfg = view.setup.config;
   const days = view.clock.open;
   const [day, setDay] = useState(days[days.length - 1]);
@@ -82,19 +92,18 @@ export function CheckInSheet({ view, onSave, onClose }: { view: SeasonView; onSa
   const w = view.clock.windows[day - 1];
   return (
     <Sheet onClose={onClose}>
-      <h2>Check in</h2>
+      <h2>{t('checkin.title')}</h2>
       {days.length > 1 && (
         <div className="row" style={{ marginBottom: 8 }}>
           {days.map((d) => (
             <button key={d} className={'btn small' + (d === day ? ' gold' : '')} onClick={() => switchDay(d)}>
-              Day {d}
-              {view.myCheckin(d) ? ' ✓' : ''}
+              {t('checkin.dayButton', { day: d, check: view.myCheckin(d) ? ' ✓' : '' })}
             </button>
           ))}
         </div>
       )}
       <div className="muted" style={{ marginBottom: 8 }}>
-        Day {day} · {new Date(w.date + 'T12:00:00').toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' })} — editable until Dawn.
+        {t('checkin.dayDateHint', { day, date: formatWeekdayDate(w.date) })}
       </div>
       <div className="col">
         {cfg.type !== 'numeric' && (
@@ -107,27 +116,31 @@ export function CheckInSheet({ view, onSave, onClose }: { view: SeasonView; onSa
             ))}
             {cfg.type === 'checklist' && (
               <button className="linkbtn" style={{ color: '#7a4a10', alignSelf: 'flex-start' }} onClick={() => setKept(cfg.rules.map(() => true))}>
-                All kept
+                {t('checkin.allKept')}
               </button>
             )}
           </>
         )}
         {cfg.type === 'numeric' && (
           <label className="field">
-            {cfg.direction === 'lower' ? `How much? (target: at most ${cfg.target} ${cfg.unit})` : `How much? (target: ${cfg.target} ${cfg.unit})`}
+            {cfg.direction === 'lower'
+              ? t('checkin.howMuchLower', { target: formatNumber(cfg.target ?? 0), unit: cfg.unit })
+              : t('checkin.howMuchHigher', { target: formatNumber(cfg.target ?? 0), unit: cfg.unit })}
             <input type="number" inputMode="decimal" value={value} onChange={(e) => setValue(e.target.value)} autoFocus />
           </label>
         )}
         <div className="row" style={{ justifyContent: 'space-between', fontWeight: 800 }}>
-          <span>{r === null ? '—' : r >= 1.5 ? '🔥 Inspired!' : r >= 1 ? '✔ Target reached' : 'Honest report — still pays'}</span>
+          <span>
+            {r === null ? '—' : r >= 1.5 ? t('checkin.statusInspired') : r >= 1 ? t('checkin.statusTarget') : t('checkin.statusHonest')}
+          </span>
           <Gold n={gold} />
         </div>
         <div className="muted" style={{ fontSize: 12 }}>
-          Honesty pays: a missed day still earns {dayGold(cfg.days, 0, spp)}+ gold. Not reporting earns nothing and your hero stays home.
+          {t('checkin.honestyHint', { minGold: dayGold(cfg.days, 0, spp) })}
         </div>
         {error && <div className="error">{error}</div>}
         <button className="btn gold block" disabled={!checkin || busy} onClick={save}>
-          Report
+          {t('checkin.submit')}
         </button>
       </div>
     </Sheet>
@@ -137,6 +150,7 @@ export function CheckInSheet({ view, onSave, onClose }: { view: SeasonView; onSa
 // ---------------------------------------------------------------------------
 
 export function BuildSheet({ view, padId, onOrders, onClose }: { view: SeasonView; padId: PadId; onOrders: (o: Order[]) => void; onClose: () => void }) {
+  const { t } = useTranslation();
   const pv = view.preview!;
   const me = view.me;
   const gold = pv.state.players[me].gold;
@@ -157,37 +171,42 @@ export function BuildSheet({ view, padId, onOrders, onClose }: { view: SeasonVie
   return (
     <Sheet onClose={onClose}>
       <div className="row" style={{ justifyContent: 'space-between' }}>
-        <h2 style={{ margin: 0 }}>{b ? `${BUILDING_INFO[b.type].name} · Level ${b.level}` : before.rubble ? 'Ruins' : 'Empty plot'}</h2>
+        <h2 style={{ margin: 0 }}>
+          {b ? t('build.buildingHeader', { name: getBuildingInfo(b.type).name, level: b.level }) : before.rubble ? t('build.ruins') : t('build.emptyPlot')}
+        </h2>
         <Gold n={gold} />
       </div>
       {b && (
         <div className="muted" style={{ marginBottom: 6 }}>
-          {towerLine(b.type, b.level, bonus)} · HP {Math.round(b.hp)}/{BUILDING_HP[b.level - 1]}
+          {towerLine(b.type, b.level, bonus)} · {t('build.hpStat', { hp: Math.round(b.hp), maxHp: BUILDING_HP[b.level - 1] })}
         </div>
       )}
       <div className="col" style={{ marginTop: 8 }}>
         {!b &&
-          (Object.keys(BUILDING_INFO) as BuildingType[]).map((t) => (
-            <button key={t} className="option" disabled={gold < BUILD_COST[t]} onClick={() => add({ kind: 'build', pad: padId, type: t })}>
-              <img src={`/assets/building_${t}_1.webp`} alt="" />
-              <div>
-                <b>{BUILDING_INFO[t].name}</b>{' '}
-                {BUILDING_INFO[t].icons.map((i) => (
-                  <Icon key={i} id={i} size={16} />
-                ))}
-                <div style={{ fontSize: 13 }}>{BUILDING_INFO[t].text}</div>
-                <div style={{ fontSize: 12 }} className="muted">
-                  {towerLine(t, 1, bonus)}
+          BUILDING_TYPES.map((bt) => {
+            const info = getBuildingInfo(bt);
+            return (
+              <button key={bt} className="option" disabled={gold < BUILD_COST[bt]} onClick={() => add({ kind: 'build', pad: padId, type: bt })}>
+                <img src={`/assets/building_${bt}_1.webp`} alt="" />
+                <div>
+                  <b>{info.name}</b>{' '}
+                  {info.icons.map((ic) => (
+                    <Icon key={ic} id={ic} size={16} />
+                  ))}
+                  <div style={{ fontSize: 13 }}>{info.text}</div>
+                  <div style={{ fontSize: 12 }} className="muted">
+                    {towerLine(bt, 1, bonus)}
+                  </div>
                 </div>
-              </div>
-              <Gold n={BUILD_COST[t]} />
-            </button>
-          ))}
+                <Gold n={BUILD_COST[bt]} />
+              </button>
+            );
+          })}
         {b && b.level < 3 && (
           <button className="option" disabled={gold < (upgradeCost(b.type, b.level) ?? 1e9)} onClick={() => add({ kind: 'upgrade', pad: padId })}>
             <img src={`/assets/building_${b.type}_${b.level + 1}.webp`} alt="" />
             <div>
-              <b>Upgrade to level {b.level + 1}</b>
+              <b>{t('build.upgradeTo', { level: b.level + 1 })}</b>
               <div style={{ fontSize: 13 }}>{towerLine(b.type, b.level + 1, bonus)}</div>
             </div>
             <Gold n={upgradeCost(b.type, b.level)!} />
@@ -197,16 +216,16 @@ export function BuildSheet({ view, padId, onOrders, onClose }: { view: SeasonVie
           <button className="option" disabled={gold < repairCost(b.hp, BUILDING_HP[b.level - 1])} onClick={() => add({ kind: 'repair', pad: padId })}>
             <Icon id="repair" size={54} />
             <div>
-              <b>Repair</b>
-              <div style={{ fontSize: 13 }}>Restore full health before Dawn.</div>
+              <b>{t('build.repair')}</b>
+              <div style={{ fontSize: 13 }}>{t('build.repairDesc')}</div>
             </div>
             <Gold n={repairCost(b.hp, BUILDING_HP[b.level - 1])} />
           </button>
         )}
-        {b && b.level === 3 && b.hp >= BUILDING_HP[2] && <div className="center muted">Fully upgraded and in top shape.</div>}
+        {b && b.level === 3 && b.hp >= BUILDING_HP[2] && <div className="center muted">{t('build.fullyUpgraded')}</div>}
         {planned.length > 0 && (
           <button className="btn small" onClick={cancel}>
-            ↺ Undo today's plans for this plot
+            {t('build.undoPlotPlans')}
           </button>
         )}
       </div>
@@ -218,27 +237,35 @@ export function BuildSheet({ view, padId, onOrders, onClose }: { view: SeasonVie
 
 function sectorLabel(view: SeasonView, sid: string): string {
   const sec = sectorById(view.setup.map, sid);
-  const road = ROAD_NAME[sid.split('-')[0] as Dir] ?? sid;
-  return sec ? `${road} · ${sec.ring}` : road;
+  const dir = sid.split('-')[0] as Dir;
+  const road = DIRS.includes(dir) ? getRoadName(dir) : sid;
+  return sec ? `${road} · ${i18n.t(`roads.ring.${sec.ring}`)}` : road;
 }
 
 export function orderLabel(o: Order, view: SeasonView): string {
   const name = (pid: string) => view.setup.players.find((p) => p.id === pid)?.name ?? pid;
   switch (o.kind) {
     case 'build':
-      return `Build ${BUILDING_INFO[o.type].name}`;
+      return i18n.t('plan.orders.build', { name: getBuildingInfo(o.type).name });
     case 'upgrade':
-      return 'Upgrade building';
+      return i18n.t('plan.orders.upgrade');
     case 'repair':
-      return 'Repair building';
+      return i18n.t('plan.orders.repair');
     case 'donate':
-      return o.to === 'keep' ? `Donate ${o.amount} gold to the Keep` : `Give ${o.amount} gold to ${name(o.to)}`;
+      return o.to === 'keep'
+        ? i18n.t('plan.orders.donateKeep', { amount: formatNumber(o.amount) })
+        : i18n.t('plan.orders.donatePlayer', { amount: formatNumber(o.amount), name: name(o.to) });
     case 'stance':
-      return o.mode === 'own' ? 'Hero defends own sector' : o.mode === 'keep' ? 'Hero defends the Keep' : `Hero reinforces ${sectorLabel(view, o.sector ?? '')}`;
+      return o.mode === 'own'
+        ? i18n.t('plan.orders.stanceOwn')
+        : o.mode === 'keep'
+          ? i18n.t('plan.orders.stanceKeep')
+          : i18n.t('plan.orders.stanceNeighbor', { sector: sectorLabel(view, o.sector ?? '') });
   }
 }
 
 export function PlanSheet({ view, onOrders, onOpenPad, onClose }: { view: SeasonView; onOrders: (o: Order[]) => void; onOpenPad: (pad: PadId) => void; onClose: () => void }) {
+  const { t } = useTranslation();
   const pv = view.preview!;
   const me = view.me;
   const gold = pv.state.players[me].gold;
@@ -254,18 +281,20 @@ export function PlanSheet({ view, onOrders, onOpenPad, onClose }: { view: Season
 
   const setStance = (o: Order) => onOrders([...view.myOrders.filter((x) => x.kind !== 'stance'), o]);
   const myPads = view.setup.map.sectors.filter((s) => view.state.players[me].sectors.includes(s.id)).flatMap((s) => s.pads);
+  const heroInfo = getHeroInfo(myClass);
+  const heroStatus = t(`plan.heroStatus.${pv.players[me].status}`);
 
   return (
     <Sheet onClose={onClose}>
       <div className="row" style={{ justifyContent: 'space-between' }}>
-        <h2 style={{ margin: 0 }}>Plans for Dawn</h2>
+        <h2 style={{ margin: 0 }}>{t('plan.title')}</h2>
         <Gold n={gold} />
       </div>
       <div className="muted" style={{ fontSize: 13, marginBottom: 6 }}>
-        Tap your glowing plots on the map to build. Plans can be changed until Dawn.
+        {t('plan.subtitle')}
       </div>
       <div className="col">
-        {view.myOrders.length === 0 && <div className="muted">No plans yet.</div>}
+        {view.myOrders.length === 0 && <div className="muted">{t('plan.noPlans')}</div>}
         {view.myOrders.map((o, i) => (
           <div key={i} className="row option" style={{ cursor: 'default' }}>
             <span className="grow">{orderLabel(o, view)}</span>
@@ -274,11 +303,11 @@ export function PlanSheet({ view, onOrders, onOpenPad, onClose }: { view: Season
             </button>
           </div>
         ))}
-        {skipped.length > 0 && <div className="error">{skipped.map((s) => `${orderLabel(s.order, view)}: ${s.reason}`).join(' · ')}</div>}
+        {skipped.length > 0 && <div className="error">{skipped.map((s) => `${orderLabel(s.order, view)}: ${translateSkipReason(s.reason)}`).join(' · ')}</div>}
 
-        <h3 style={{ marginTop: 10 }}>Your plots</h3>
+        <h3 style={{ marginTop: 10 }}>{t('plan.yourPlots')}</h3>
         <div className="muted" style={{ fontSize: 12 }}>
-          Build on free plots, upgrade towers (stronger, longer range, more HP) or repair damage.
+          {t('plan.yourPlotsHint')}
         </div>
         {myPads.map((p, i) => {
           const st = pv.state.pads[p.id];
@@ -289,13 +318,13 @@ export function PlanSheet({ view, onOrders, onOpenPad, onClose }: { view: Season
             <div key={p.id} className="row option" style={{ cursor: 'default', padding: '4px 8px' }}>
               {b ? <img src={`/assets/building_${b.type}_${b.level}.webp`} alt="" style={{ width: 36, height: 36 }} /> : <span style={{ width: 36, textAlign: 'center', fontSize: 22 }}>＋</span>}
               <span className="grow" style={{ fontSize: 13 }}>
-                <b>{b ? `${BUILDING_INFO[b.type].name} · Lv ${b.level}` : st?.rubble ? 'Ruins' : 'Free plot'}</b>
-                <span className="muted"> · plot {i + 1}</span>
-                {b && rep > 0 && <span className="muted"> · HP {Math.round(b.hp)}/{BUILDING_HP[b.level - 1]}</span>}
+                <b>{b ? t('plan.buildingLv', { name: getBuildingInfo(b.type).name, level: b.level }) : st?.rubble ? t('build.ruins') : t('plan.freePlot')}</b>
+                <span className="muted">{t('plan.plotIndex', { n: i + 1 })}</span>
+                {b && rep > 0 && <span className="muted"> · {t('build.hpStat', { hp: Math.round(b.hp), maxHp: BUILDING_HP[b.level - 1] })}</span>}
               </span>
               {!b && (
                 <button className="btn small gold" onClick={() => onOpenPad(p.id)}>
-                  Build
+                  {t('plan.buildButton')}
                 </button>
               )}
               {b && up !== null && (
@@ -309,7 +338,7 @@ export function PlanSheet({ view, onOrders, onOpenPad, onClose }: { view: Season
                 </button>
               )}
               {b && (
-                <button className="btn small" onClick={() => onOpenPad(p.id)} title="Show on map">
+                <button className="btn small" onClick={() => onOpenPad(p.id)} title={t('plan.showOnMap')}>
                   📍
                 </button>
               )}
@@ -317,12 +346,12 @@ export function PlanSheet({ view, onOrders, onOpenPad, onClose }: { view: Season
           );
         })}
 
-        <h3 style={{ marginTop: 10 }}>Your hero</h3>
+        <h3 style={{ marginTop: 10 }}>{t('plan.yourHero')}</h3>
         <div className="row">
           <img src={portraitUrl(myClass)} width={56} height={56} style={{ borderRadius: '50%', objectFit: 'cover', objectPosition: 'top', background: '#c9b48a' }} alt="" />
           <div style={{ fontSize: 13 }}>
-            <b>{HERO_INFO[myClass].name}</b> · Lv {heroLevel(pv.state.players[me].xp)} · {HEROES[myClass].hp} HP base
-            <div>Status tonight: {pv.players[me].status === 'absent' ? 'stays home (no report yet)' : pv.players[me].status}</div>
+            <b>{heroInfo.name}</b> · {t('plan.heroStats', { level: heroLevel(pv.state.players[me].xp), hp: HEROES[myClass].hp })}
+            <div>{t('plan.statusTonight', { status: heroStatus })}</div>
           </div>
         </div>
         <select
@@ -333,28 +362,29 @@ export function PlanSheet({ view, onOrders, onOpenPad, onClose }: { view: Season
             else setStance({ kind: 'stance', mode: 'neighbor', sector: v.slice(2) });
           }}
         >
-          <option value="own">Defend my own sector</option>
-          <option value="keep">Defend the Keep</option>
+          <option value="own">{t('plan.stanceOwn')}</option>
+          <option value="keep">{t('plan.stanceKeep')}</option>
           {[...owners.entries()]
             .filter(([, pid]) => pid !== me)
             .map(([sid, pid]) => (
               <option key={sid} value={`n:${sid}`}>
-                Reinforce {nameOf(pid)} ({sectorLabel(view, sid)})
+                {t('plan.stanceReinforce', { name: nameOf(pid), sector: sectorLabel(view, sid) })}
               </option>
             ))}
         </select>
         <div className="muted" style={{ fontSize: 12 }}>
-          {STANCE_HELP[stance.mode]}
+          {t(`plan.stanceHelp.${stance.mode}`)}
         </div>
 
-        <h3 style={{ marginTop: 10 }}>Share gold</h3>
+        <h3 style={{ marginTop: 10 }}>{t('plan.shareGold')}</h3>
         <div style={{ fontSize: 13 }}>
-          Keep level {keep.level} · fund {keep.fund}
-          {keep.level < 3 ? ` / ${KEEP.fund[keep.level - 1]} for the next level (more HP, stronger keep archers)` : ' (max level)'}
+          {keep.level < 3
+            ? t('plan.keepProgress', { level: keep.level, fund: formatNumber(keep.fund), nextFund: formatNumber(KEEP.fund[keep.level - 1]) })
+            : t('plan.keepMax', { level: keep.level, fund: formatNumber(keep.fund) })}
         </div>
         <div className="row">
           <select value={donateTo} onChange={(e) => setDonateTo(e.target.value)} style={{ flex: 2 }}>
-            <option value="keep">The Keep</option>
+            <option value="keep">{t('plan.theKeep')}</option>
             {view.setup.players
               .filter((p) => p.id !== me)
               .map((p) => (
@@ -365,7 +395,7 @@ export function PlanSheet({ view, onOrders, onOpenPad, onClose }: { view: Season
           </select>
           <input type="number" min={ECON.minDonate} value={amount} onChange={(e) => setAmount(Math.floor(Number(e.target.value)))} style={{ flex: 1 }} />
           <button className="btn small" disabled={amount < ECON.minDonate || amount > gold} onClick={() => onOrders([...view.myOrders, { kind: 'donate', to: donateTo, amount }])}>
-            Give
+            {t('plan.give')}
           </button>
         </div>
       </div>
@@ -376,6 +406,7 @@ export function PlanSheet({ view, onOrders, onOpenPad, onClose }: { view: Season
 // ---------------------------------------------------------------------------
 
 export function IntentSheet({ view, onClose }: { view: SeasonView; onClose: () => void }) {
+  const { t } = useTranslation();
   const intent = view.state.intent;
   const theme = getTheme(view.setup.config.theme);
   const roles = theme.roles;
@@ -383,18 +414,13 @@ export function IntentSheet({ view, onClose }: { view: SeasonView; onClose: () =
   for (const p of view.setup.players) for (const s of view.state.players[p.id].sectors) owners.set(s.split('-')[0] as Dir, [...(owners.get(s.split('-')[0] as Dir) ?? []), p.name]);
   return (
     <Sheet onClose={onClose}>
-      <h2>Scout report · Dawn {intent?.day}</h2>
-      {!intent && <div>The season is over.</div>}
+      <h2>{t('intent.title', { day: intent?.day ?? '' })}</h2>
+      {!intent && <div>{t('intent.seasonOver')}</div>}
       {intent?.bossNight && (
         <div className="row" style={{ background: 'rgba(180,30,60,0.2)', borderRadius: 10, padding: 6, marginBottom: 8 }}>
-          <img
-            src={`/assets/${theme.portraitBoss}.webp`}
-            width={64}
-            height={64}
-            alt=""
-          />
+          <img src={`/assets/${theme.portraitBoss}.webp`} width={64} height={64} alt="" />
           <div>
-            <b>Boss night!</b> {theme.bossName} marches. Slay the boss for a bonus star and +{ECON.bossBonusGold} gold each.
+            <RichText i18nKey="intent.bossBanner" values={{ bossName: theme.bossName, gold: ECON.bossBonusGold }} />
           </div>
         </div>
       )}
@@ -405,43 +431,31 @@ export function IntentSheet({ view, onClose }: { view: SeasonView; onClose: () =
             return (
               <div key={d} className="option" style={{ flexDirection: 'column', alignItems: 'stretch', cursor: 'default' }}>
                 <div className="row" style={{ justifyContent: 'space-between' }}>
-                  <b>{ROAD_NAME[d]}</b>
+                  <b>{getRoadName(d)}</b>
                   <span style={{ fontSize: 12 }}>{owners.get(d)?.join(', ')}</span>
                 </div>
                 <div className="row" style={{ flexWrap: 'wrap', gap: 10 }}>
                   {(Object.keys(ri.counts) as EnemyRole[]).map((r) => (
                     <span key={r} className="row" style={{ gap: 2, fontWeight: 800 }}>
-                      <img
-                        src={enemyImg(theme.id, r)}
-                        width={40}
-                        height={40}
-                        style={{ objectFit: 'contain' }}
-                        alt=""
-                      />
+                      <img src={enemyImg(theme.id, r)} width={40} height={40} style={{ objectFit: 'contain' }} alt="" />
                       ×{ri.counts[r]}
                     </span>
                   ))}
                 </div>
                 <div style={{ fontSize: 13 }}>
-                  {roles[ri.featured].icon && <Icon id={roles[ri.featured].icon!} size={16} />} <b>{roles[ri.featured].name}s:</b> {roles[ri.featured].tip}
+                  {roles[ri.featured].icon && <Icon id={roles[ri.featured].icon!} size={16} />} <b>{roles[ri.featured].plural}:</b> {roles[ri.featured].tip}
                 </div>
               </div>
             );
           })}
       </div>
-      <h3 style={{ marginTop: 12 }}>Bestiary ({theme.name})</h3>
+      <h3 style={{ marginTop: 12 }}>{t('intent.bestiaryTitle', { themeName: theme.name })}</h3>
       <div className="col" style={{ gap: 4 }}>
         {(Object.keys(roles) as EnemyRole[]).map((r) => (
           <div key={r} className="row" style={{ fontSize: 13 }}>
-            <img
-              src={enemyImg(theme.id, r)}
-              width={36}
-              height={36}
-              style={{ objectFit: 'contain' }}
-              alt=""
-            />
+            <img src={enemyImg(theme.id, r)} width={36} height={36} style={{ objectFit: 'contain' }} alt="" />
             <div>
-              <b>{roles[r].name}</b> · {r === 'boss' ? 'huge' : ENEMIES[r].hp} HP — {roles[r].tip}
+              <b>{roles[r].name}</b> · {r === 'boss' ? t('intent.bossHp') : t('intent.enemyHp', { hp: ENEMIES[r].hp })} — {roles[r].tip}
             </div>
           </div>
         ))}
@@ -453,6 +467,7 @@ export function IntentSheet({ view, onClose }: { view: SeasonView; onClose: () =
 // ---------------------------------------------------------------------------
 
 export function DawnReport({ view, report, onClose, onReplay }: { view: SeasonView; report: DayReport; onClose: () => void; onReplay: () => void }) {
+  const { t } = useTranslation();
   const me = view.me;
   const mine = report.players[me];
   const stats = report.battle.stats[me] ?? { damage: 0, kills: 0, blocks: 0 };
@@ -470,54 +485,68 @@ export function DawnReport({ view, report, onClose, onReplay }: { view: SeasonVi
         />
       )}
       <div className="center selectable">
-        <h2>{report.keepFell ? 'The Keep has fallen…' : report.stars === 3 ? 'Flawless defence!' : 'The line held'}</h2>
+        <h2>{report.keepFell ? t('report.titleFell') : report.stars === 3 ? t('report.titleFlawless') : t('report.titleHeld')}</h2>
         <Stars n={report.stars} size={48} />
         <div style={{ marginTop: 6 }}>
-          Dawn {report.day} · <Icon id="heart" size={18} /> Keep {Math.round(report.keepBefore)} → {Math.round(report.keepAfter)} · {report.battle.leaks} got through
+          {t('report.dawnLabel', { day: report.day })} · <Icon id="heart" size={18} />{' '}
+          {t('report.keepSummary', { before: Math.round(report.keepBefore), after: Math.round(report.keepAfter) })} · {t('report.leaks', { count: report.battle.leaks })}
         </div>
-        {report.bossKilled && <div style={{ fontWeight: 900, marginTop: 4 }}>⚔ {theme.bossName} was slain! Bonus star and +{ECON.bossBonusGold} gold each.</div>}
+        {report.bossKilled && <div style={{ fontWeight: 900, marginTop: 4 }}>{t('report.bossSlain', { bossName: theme.bossName, gold: ECON.bossBonusGold })}</div>}
         {report.rally && (
           <div style={{ marginTop: 4 }}>
-            <Icon id="rally" size={18} /> Rally! Everyone reported — towers fired faster.
+            <Icon id="rally" size={18} /> {t('report.rally')}
           </div>
         )}
-        {report.keepFell && <div style={{ marginTop: 4 }}>It will be rebuilt at half strength. Regroup and repair!</div>}
+        {report.keepFell && <div style={{ marginTop: 4 }}>{t('report.keepRebuildHint')}</div>}
       </div>
       <div className="col selectable" style={{ marginTop: 10, gap: 4, fontSize: 14 }}>
         <div className="row" style={{ justifyContent: 'space-between' }}>
-          <span>Your report</span>
-          <b>{mine.r === null ? 'none — hero stayed home' : mine.r >= 1 ? 'target reached' : 'honest miss'}</b>
+          <span>{t('report.yourReport')}</span>
+          <b>{mine.r === null ? t('report.reportNone') : mine.r >= 1 ? t('report.reportTarget') : t('report.reportMiss')}</b>
         </div>
         <div className="row" style={{ justifyContent: 'space-between' }}>
-          <span>Gold earned</span>
+          <span>{t('report.goldEarned')}</span>
           <Gold n={mine.goldEarned} />
         </div>
         <div className="row" style={{ justifyContent: 'space-between' }}>
-          <span>Your damage · kills · blocks</span>
+          <span>{t('report.combatStats')}</span>
           <b>
-            {Math.round(stats.damage)} · {stats.kills} · {stats.blocks}
+            {formatNumber(Math.round(stats.damage))} · {formatNumber(stats.kills)} · {formatNumber(stats.blocks)}
           </b>
         </div>
-        {mine.skipped.length > 0 && <div className="error">Not carried out: {mine.skipped.map((s) => `${orderLabel(s.order, view)} (${s.reason})`).join(', ')}</div>}
-        {(report.battle.escaped?.length ?? 0) > 0 && (
-          <div className="muted" style={{ fontSize: 13 }}>
-            ☀ At sunrise these enemies retreated (no harm done, but no kill either):{' '}
-            {Object.entries(
-              report.battle.escaped!.reduce<Record<string, { n: number; hp: number[] }>>((acc, e) => {
-                const k = theme.roles[e.role].name;
-                (acc[k] ??= { n: 0, hp: [] }).n++;
-                acc[k].hp.push(e.hpPct);
-                return acc;
-              }, {}),
-            )
-              .map(([k, v]) => (v.n === 1 ? `${k} (${v.hp[0]}% HP)` : `${v.n}× ${k}`))
-              .join(', ')}
+        {mine.skipped.length > 0 && (
+          <div className="error">
+            {t('report.notCarriedOut', {
+              items: mine.skipped.map((s) => `${orderLabel(s.order, view)} (${translateSkipReason(s.reason)})`).join(', '),
+            })}
           </div>
         )}
-        <h3 style={{ marginTop: 8 }}>Heroes of the night</h3>
-        <div>🏹 Top damage: <b>{name(report.mvp.damage)}</b></div>
-        <div>🛡 The Wall: <b>{name(report.mvp.wall)}</b></div>
-        <div>💰 Patron: <b>{name(report.mvp.patron)}</b></div>
+        {(report.battle.escaped?.length ?? 0) > 0 && (
+          <div className="muted" style={{ fontSize: 13 }}>
+            {t('report.sunriseRetreat', {
+              enemies: Object.entries(
+                report.battle.escaped!.reduce<Record<string, { n: number; hp: number[] }>>((acc, e) => {
+                  const k = theme.roles[e.role].name;
+                  (acc[k] ??= { n: 0, hp: [] }).n++;
+                  acc[k].hp.push(e.hpPct);
+                  return acc;
+                }, {}),
+              )
+                .map(([k, v]) => (v.n === 1 ? t('report.escapedSingle', { name: k, hp: v.hp[0] }) : t('report.escapedMultiple', { count: v.n, name: k })))
+                .join(', '),
+            })}
+          </div>
+        )}
+        <h3 style={{ marginTop: 8 }}>{t('report.heroesOfNight')}</h3>
+        <div>
+          {t('report.mvpDamage')} <b>{name(report.mvp.damage)}</b>
+        </div>
+        <div>
+          {t('report.mvpWall')} <b>{name(report.mvp.wall)}</b>
+        </div>
+        <div>
+          {t('report.mvpPatron')} <b>{name(report.mvp.patron)}</b>
+        </div>
         <div className="row" style={{ flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
           {view.setup.players.map((p, i) => {
             const pr = report.players[p.id];
@@ -531,18 +560,18 @@ export function DawnReport({ view, report, onClose, onReplay }: { view: SeasonVi
       </div>
       {final && (
         <div className="center selectable" style={{ marginTop: 12 }}>
-          <h2>Season complete!</h2>
+          <h2>{t('report.seasonComplete')}</h2>
           <div style={{ fontSize: 18 }}>
-            Rank: <b style={{ textTransform: 'capitalize' }}>{final.rank}</b> · {Math.round(final.pct * 100)} % of stars
+            <RichText i18nKey="report.rankSummary" values={{ rank: t(`report.ranks.${final.rank}`), pct: Math.round(final.pct * 100) }} />
           </div>
         </div>
       )}
       <div className="row" style={{ marginTop: 12 }}>
         <button className="btn grow" onClick={onReplay}>
-          ↻ Watch again
+          {t('report.watchAgain')}
         </button>
         <button className="btn gold grow" onClick={onClose}>
-          Onward
+          {t('report.onward')}
         </button>
       </div>
     </Sheet>

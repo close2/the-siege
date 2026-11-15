@@ -1,9 +1,11 @@
 // Force themes: enemy role names, tips, and boss metadata. See docs/design.md §7 & docs/art-list.md.
+import i18n from '../i18n';
 import type { EnemyRole, ThemeId } from '../sim/types';
 export type { ThemeId };
 
 export interface RoleThemeInfo {
   name: string;
+  plural: string;
   tip: string;
   icon?: string;
 }
@@ -18,72 +20,46 @@ export interface ThemeDef {
   roles: Record<EnemyRole, RoleThemeInfo>;
 }
 
-export const THEMES: Record<ThemeId, ThemeDef> = {
-  sugar: {
-    id: 'sugar',
-    ready: true,
-    name: 'The Sugar Horde',
-    bossName: 'The Sugar Wraith',
-    portraitBoss: 'portrait_boss_sugar',
-    roles: {
-      grunt: { name: 'Gummy Grunt', tip: 'Basic foot soldier.' },
-      runner: { name: 'Candy Imp', tip: 'Fast! Archers and soldiers catch them.' },
-      brute: { name: 'Choco Brute', tip: 'Armoured — arrows barely scratch it. Use mages.', icon: 'armor' },
-      flyer: { name: 'Floss Bat', tip: 'Flies over soldiers. Only archers, mages, rangers and priestesses hit it.', icon: 'flying' },
-      siege: { name: 'Cake Golem', tip: 'Smashes buildings in passing. Kill it fast; repair afterwards.', icon: 'siege' },
-      boss: { name: 'The Sugar Wraith', tip: 'Boss. Huge health, speeds up nearby enemies.', icon: 'magic' },
-    },
-  },
-  sloth: {
-    id: 'sloth',
-    ready: false,
-    name: 'The Sloth Mire',
-    bossName: 'The Moss Colossus',
-    portraitBoss: 'portrait_boss_sloth',
-    roles: {
-      grunt: { name: 'Snooze Creep', tip: 'Basic foot soldier.' },
-      runner: { name: 'Pillow Sprite', tip: 'Fast! Archers and soldiers catch them.' },
-      brute: { name: 'Couch Troll', tip: 'Armoured — arrows barely scratch it. Use mages.', icon: 'armor' },
-      flyer: { name: 'Dream Moth', tip: 'Flies over soldiers. Only archers, mages, rangers and priestesses hit it.', icon: 'flying' },
-      siege: { name: 'Peat Hulk', tip: 'Smashes buildings in passing. Kill it fast; repair afterwards.', icon: 'siege' },
-      boss: { name: 'The Moss Colossus', tip: 'Boss. Huge health, speeds up nearby enemies.', icon: 'magic' },
-    },
-  },
-  doom: {
-    id: 'doom',
-    ready: false,
-    name: 'The Doomscroll Swarm',
-    bossName: 'The Endless Feed',
-    portraitBoss: 'portrait_boss_doom',
-    roles: {
-      grunt: { name: 'Screen Walker', tip: 'Basic foot soldier.' },
-      runner: { name: 'Ping Gremlin', tip: 'Fast! Archers and soldiers catch them.' },
-      brute: { name: 'Static Golem', tip: 'Armoured — arrows barely scratch it. Use mages.', icon: 'armor' },
-      flyer: { name: 'Glitch Eye', tip: 'Flies over soldiers. Only archers, mages, rangers and priestesses hit it.', icon: 'flying' },
-      siege: { name: 'Tower Monolith', tip: 'Smashes buildings in passing. Kill it fast; repair afterwards.', icon: 'siege' },
-      boss: { name: 'The Endless Feed', tip: 'Boss. Huge health, speeds up nearby enemies.', icon: 'magic' },
-    },
-  },
-  ember: {
-    id: 'ember',
-    ready: false,
-    name: 'The Ember Host',
-    bossName: 'The Cinder Sovereign',
-    portraitBoss: 'portrait_boss_ember',
-    roles: {
-      grunt: { name: 'Ash Imp', tip: 'Basic foot soldier.' },
-      runner: { name: 'Spark Hound', tip: 'Fast! Archers and soldiers catch them.' },
-      brute: { name: 'Basalt Brute', tip: 'Armoured — arrows barely scratch it. Use mages.', icon: 'armor' },
-      flyer: { name: 'Cinder Drake', tip: 'Flies over soldiers. Only archers, mages, rangers and priestesses hit it.', icon: 'flying' },
-      siege: { name: 'Magma Ram', tip: 'Smashes buildings in passing. Kill it fast; repair afterwards.', icon: 'siege' },
-      boss: { name: 'The Cinder Sovereign', tip: 'Boss. Huge health, speeds up nearby enemies.', icon: 'magic' },
-    },
-  },
+const ROLE_ICONS: Partial<Record<EnemyRole, string>> = {
+  brute: 'armor',
+  flyer: 'flying',
+  siege: 'siege',
+  boss: 'magic',
 };
 
-/** Themes that can be chosen for new challenges. */
-export const SELECTABLE_THEMES: readonly ThemeDef[] = Object.values(THEMES).filter((t) => t.ready);
+const THEME_META: Record<ThemeId, { ready: boolean; portraitBoss: string }> = {
+  sugar: { ready: true, portraitBoss: 'portrait_boss_sugar' },
+  sloth: { ready: false, portraitBoss: 'portrait_boss_sloth' },
+  doom: { ready: false, portraitBoss: 'portrait_boss_doom' },
+  ember: { ready: false, portraitBoss: 'portrait_boss_ember' },
+};
+
+const ROLES: readonly EnemyRole[] = ['grunt', 'runner', 'brute', 'flyer', 'siege', 'boss'];
+const THEME_IDS: readonly ThemeId[] = ['sugar', 'sloth', 'doom', 'ember'];
 
 export function getTheme(id: string): ThemeDef {
-  return THEMES[id as ThemeId] ?? THEMES.sugar;
+  const tid: ThemeId = (id in THEME_META ? id : 'sugar') as ThemeId;
+  const meta = THEME_META[tid];
+  const roles = {} as Record<EnemyRole, RoleThemeInfo>;
+  for (const r of ROLES) {
+    roles[r] = {
+      name: i18n.t(`themes.${tid}.roles.${r}.name`),
+      plural: i18n.t(`themes.${tid}.roles.${r}.plural`),
+      tip: i18n.t(`themes.roleTips.${r}`),
+      ...(ROLE_ICONS[r] ? { icon: ROLE_ICONS[r] } : {}),
+    };
+  }
+  return {
+    id: tid,
+    ready: meta.ready,
+    name: i18n.t(`themes.${tid}.name`),
+    bossName: i18n.t(`themes.${tid}.bossName`),
+    portraitBoss: meta.portraitBoss,
+    roles,
+  };
+}
+
+/** Themes that can be chosen for new challenges, localized to the active language. */
+export function getSelectableThemes(): ThemeDef[] {
+  return THEME_IDS.filter((id) => THEME_META[id].ready).map((id) => getTheme(id));
 }

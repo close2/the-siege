@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useApp } from '../App';
 import { DRY_RUN_ID, type Challenge } from '../net/types';
 import { seasonClock } from '../sim/calendar';
 import { fmtDuration, portraitUrl } from './common';
 
 export function Home() {
+  const { t } = useTranslation();
   const { backend, user, navigate } = useApp();
   const [list, setList] = useState<Challenge[] | null>(null);
   const [code, setCode] = useState('');
@@ -36,28 +38,28 @@ export function Home() {
     <div className="screen bg-art col">
       <div className="row">
         <h1 className="grow" style={{ margin: 0, textShadow: '0 2px 8px #000' }}>
-          The Siege
+          {t('app.title')}
         </h1>
         <button className="btn small" onClick={() => navigate('/tutorial')}>
-          📖 Help
+          {t('home.help')}
         </button>
         <button className="btn small" onClick={() => navigate('/settings')}>
           ⚙ {user.name}
         </button>
       </div>
-      {backend.mode === 'local' && <div className="chip" style={{ alignSelf: 'flex-start' }}>Offline demo · teammates are bots</div>}
+      {backend.mode === 'local' && <div className="chip" style={{ alignSelf: 'flex-start' }}>{t('home.offlineChip')}</div>}
       {error && <div className="error">{error}</div>}
 
       {list && list.length === 0 && (
         <div className="panel center col">
-          <h2>No sieges yet</h2>
-          <p style={{ margin: 0 }}>Start a challenge with friends — or learn the ropes with a guided dry run.</p>
+          <h2>{t('home.emptyTitle')}</h2>
+          <p style={{ margin: 0 }}>{t('home.emptyText')}</p>
           <div className="row" style={{ justifyContent: 'center', flexWrap: 'wrap', marginTop: 4 }}>
             <button className="btn small" onClick={() => navigate('/tutorial')}>
-              📖 How to play
+              {t('home.howToPlay')}
             </button>
             <button className="btn small gold" onClick={startDryRun}>
-              🎯 Try a dry run
+              {t('home.tryDryRun')}
             </button>
           </div>
         </div>
@@ -68,10 +70,10 @@ export function Home() {
         const me = c.members.find((m) => m.userId === user.id);
         const isDry = c.id === DRY_RUN_ID;
         const status = clock.finished
-          ? 'Season over'
+          ? t('home.seasonOver')
           : !clock.started
-            ? `Starts in ${fmtDuration(clock.windows[0].open - cNow)}`
-            : `Day ${Math.min(c.config.days, clock.resolved + 1)} of ${c.config.days}`;
+            ? t('home.startsIn', { duration: fmtDuration(clock.windows[0].open - cNow) })
+            : t('home.dayOf', { day: Math.min(c.config.days, clock.resolved + 1), total: c.config.days });
         return (
           <button key={c.id} className="option panel" style={{ border: undefined, padding: 4 }} onClick={() => navigate(`/c/${c.id}`)}>
             {me && <img src={portraitUrl(me.heroClass)} alt="" style={{ borderRadius: '50%', objectFit: 'cover', objectPosition: 'top', background: '#c9b48a' }} />}
@@ -80,8 +82,8 @@ export function Home() {
                 {c.config.title}
               </div>
               <div style={{ fontSize: 13 }}>
-                {isDry ? 'Practice · ' : ''}
-                {status} · {c.members.length} defenders
+                {isDry ? t('home.practicePrefix') : ''}
+                {status} · {t('home.defenders', { count: c.members.length })}
               </div>
             </div>
             <span style={{ fontSize: 24 }}>›</span>
@@ -90,7 +92,7 @@ export function Home() {
       })}
 
       <button className="btn gold block" onClick={() => navigate('/new')}>
-        ⚔ New challenge
+        {t('home.newChallenge')}
       </button>
       {backend.mode === 'http' && (
         <form
@@ -100,15 +102,15 @@ export function Home() {
             if (code.trim()) navigate(`/join/${code.trim().toUpperCase()}`);
           }}
         >
-          <input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="Invite code" maxLength={8} />
+          <input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder={t('home.invitePlaceholder')} maxLength={8} />
           <button className="btn" disabled={code.trim().length < 4}>
-            Join
+            {t('home.join')}
           </button>
         </form>
       )}
       {list && list.length > 0 && !list.some((c) => c.id === DRY_RUN_ID) && (
         <button className="btn block" onClick={startDryRun}>
-          🎯 Practice in a 3-day dry run
+          {t('home.practice3Day')}
         </button>
       )}
     </div>
