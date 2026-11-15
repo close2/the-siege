@@ -115,7 +115,7 @@ export function Settings() {
           <div style={{ fontSize: 14 }}>Generate a code and enter it on the other device ("I already play on another device" or below).</div>
           {code && code.expiresAt > now ? (
             <div className="center">
-              <div className="title" style={{ fontSize: 34, letterSpacing: '0.2em' }}>
+              <div className="title selectable" style={{ fontSize: 34, letterSpacing: '0.2em' }}>
                 {code.code}
               </div>
               <div className="muted">valid for {fmtCountdown(code.expiresAt - now)}</div>

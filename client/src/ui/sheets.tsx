@@ -469,7 +469,7 @@ export function DawnReport({ view, report, onClose, onReplay }: { view: SeasonVi
           style={{ width: '100%', borderRadius: 10, marginBottom: 8, maxHeight: 220, objectFit: 'cover' }}
         />
       )}
-      <div className="center">
+      <div className="center selectable">
         <h2>{report.keepFell ? 'The Keep has fallen…' : report.stars === 3 ? 'Flawless defence!' : 'The line held'}</h2>
         <Stars n={report.stars} size={48} />
         <div style={{ marginTop: 6 }}>
@@ -483,7 +483,7 @@ export function DawnReport({ view, report, onClose, onReplay }: { view: SeasonVi
         )}
         {report.keepFell && <div style={{ marginTop: 4 }}>It will be rebuilt at half strength. Regroup and repair!</div>}
       </div>
-      <div className="col" style={{ marginTop: 10, gap: 4, fontSize: 14 }}>
+      <div className="col selectable" style={{ marginTop: 10, gap: 4, fontSize: 14 }}>
         <div className="row" style={{ justifyContent: 'space-between' }}>
           <span>Your report</span>
           <b>{mine.r === null ? 'none — hero stayed home' : mine.r >= 1 ? 'target reached' : 'honest miss'}</b>
@@ -530,7 +530,7 @@ export function DawnReport({ view, report, onClose, onReplay }: { view: SeasonVi
         </div>
       </div>
       {final && (
-        <div className="center" style={{ marginTop: 12 }}>
+        <div className="center selectable" style={{ marginTop: 12 }}>
           <h2>Season complete!</h2>
           <div style={{ fontSize: 18 }}>
             Rank: <b style={{ textTransform: 'capitalize' }}>{final.rank}</b> · {Math.round(final.pct * 100)} % of stars

@@ -41,8 +41,8 @@ export function Join({ code }: { code: string }) {
       {error && <div className="error">{error}</div>}
       {info && (
         <div className="panel col">
-          <h2>{info.title}</h2>
-          <div>
+          <h2 className="selectable">{info.title}</h2>
+          <div className="selectable">
             {info.creatorName} invites you to defend the valley. {info.memberCount} defender{info.memberCount === 1 ? '' : 's'} so far · {info.days} days from {info.startDate}.
           </div>
           {info.joinable ? (

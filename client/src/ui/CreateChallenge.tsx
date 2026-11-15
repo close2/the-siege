@@ -229,7 +229,7 @@ export function CreateChallenge() {
               </div>
             )}
           </div>
-          <div className="muted" style={{ fontSize: 13 }}>
+          <div className="muted selectable" style={{ fontSize: 13 }}>
             Time zone: {tz}. You can report each day until Dawn the next morning.
           </div>
           <button className="btn gold block" disabled={!step1Valid} onClick={() => setStep(2)}>

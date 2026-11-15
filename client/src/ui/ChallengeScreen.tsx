@@ -239,19 +239,19 @@ export function ChallengeScreen({ id }: { id: string }) {
           <button className="btn small" onClick={() => navigate('/')}>
             ‹ Home
           </button>
-          <h2 className="grow" style={{ margin: 0 }}>
+          <h2 className="grow selectable" style={{ margin: 0 }}>
             {setup.config.title}
           </h2>
         </div>
         <div className="panel col">
           <h3>Gathering the defenders</h3>
-          <div>
+          <div className="selectable">
             The siege begins in <b>{fmtDuration(clock.windows[0].open - now)}</b> ({setup.config.startDate}) and lasts {setup.config.days} days.
           </div>
           {backend.mode === 'http' && !view.challenge.local && (
             <>
               <div>Invite friends — they can join until the start:</div>
-              <div className="title center" style={{ fontSize: 28, letterSpacing: '0.15em' }}>
+              <div className="title center selectable" style={{ fontSize: 28, letterSpacing: '0.15em' }}>
                 {view.challenge.inviteCode}
               </div>
               <button
@@ -281,7 +281,7 @@ export function ChallengeScreen({ id }: { id: string }) {
           )}
           <h3>Defenders</h3>
           {view.challenge.members.map((m, i) => (
-            <div key={m.userId} className="row">
+            <div key={m.userId} className="row selectable">
               <img src={portraitUrl(m.heroClass)} width={40} height={40} style={{ borderRadius: '50%', objectFit: 'cover', objectPosition: 'top', border: `3px solid ${cssColor(PLAYER_COLORS[i % 8])}` }} alt="" />
               <b>{m.name}</b>
               {m.bot && <span className="muted">(bot)</span>}

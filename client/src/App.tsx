@@ -66,7 +66,7 @@ export function App() {
     ) : path.startsWith('/dev/vfx') ? (
       <VfxDemo />
     ) : (
-      <div className="screen">Unknown dev tool. Try /dev/sandbox, /dev/map-editor, /dev/gallery or /dev/vfx.</div>
+      <div className="screen selectable">Unknown dev tool. Try /dev/sandbox, /dev/map-editor, /dev/gallery or /dev/vfx.</div>
     );
     return <Suspense fallback={<div className="screen muted">Loading…</div>}>{tool}</Suspense>;
   }

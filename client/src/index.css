@@ -33,14 +33,21 @@ body,
   color: var(--text);
   overscroll-behavior: none;
 }
-body {
+body,
+button,
+img {
   user-select: none;
   -webkit-user-select: none;
+}
+.selectable {
+  user-select: text;
+  -webkit-user-select: text;
 }
 input,
 textarea,
 select {
   user-select: text;
+  -webkit-user-select: text;
   font: inherit;
   color: var(--ink);
   background: #fbf3dc;
@@ -187,6 +194,8 @@ label.field {
   vertical-align: middle;
 }
 .error {
+  user-select: text;
+  -webkit-user-select: text;
   color: #ffd2c8;
   background: rgba(150, 30, 20, 0.85);
   border-radius: 8px;
