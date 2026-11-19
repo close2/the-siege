@@ -1,17 +1,59 @@
 // Backend talking to the Rust server (same origin, /api).
 import { translateQueuedDrop } from '../i18n/format';
+import { currentSubscription } from '../pwa/push';
 import type { ChallengeConfig, HeroClass } from '../sim/types';
 import { LocalBackend } from './LocalBackend';
-import { ApiError, DRY_RUN_ID, type Backend, type Challenge, type ChallengeSummary, type EventKind, type GameEvent, type User } from './types';
+import {
+  ApiError,
+  DRY_RUN_ID,
+  type Backend,
+  type Challenge,
+  type ChallengeSummary,
+  type DeviceSession,
+  type EventKind,
+  type GameEvent,
+  type PendingEvent,
+  type PutEventResult,
+  type User,
+} from './types';
 
 const TOKEN = 'siege.token';
 const QUEUE = 'siege.queue';
+const PUSH_SYNCED = 'siege.pushSynced';
 
 interface QueuedPut {
+  userId?: string;
   id: string;
   day: number;
   kind: EventKind;
   payload: unknown;
+}
+
+export function detectDeviceLabel(ua = typeof navigator !== 'undefined' ? navigator.userAgent : ''): string {
+  if (!ua) return 'Web';
+  const os = /iPhone/i.test(ua)
+    ? 'iPhone'
+    : /iPad/i.test(ua)
+      ? 'iPad'
+      : /Android/i.test(ua)
+        ? 'Android'
+        : /Macintosh|Mac OS X/i.test(ua)
+          ? 'Mac'
+          : /Windows/i.test(ua)
+            ? 'Windows'
+            : /Linux/i.test(ua)
+              ? 'Linux'
+              : '';
+  const browser = /Edg\//i.test(ua)
+    ? 'Edge'
+    : /Firefox|FxiOS/i.test(ua)
+      ? 'Firefox'
+      : /Chrome|CriOS/i.test(ua)
+        ? 'Chrome'
+        : /Safari/i.test(ua)
+          ? 'Safari'
+          : 'Browser';
+  return os ? `${browser} · ${os}` : browser;
 }
 
 export class HttpBackend implements Backend {
@@ -22,12 +64,42 @@ export class HttpBackend implements Backend {
   private notices: string[] = [];
   private flushing: Promise<string[]> | null = null;
   private local = new LocalBackend();
+  private syncListeners = new Set<() => void>();
+  private authLostListeners = new Set<() => void>();
 
   async init() {
     await this.local.init();
-    await this.syncTime();
-    window.addEventListener('online', () => void this.flushQueue());
+    try {
+      await this.syncTime();
+    } catch {
+      /* offline at startup; offset will sync on next /events or 'online' event */
+    }
+    if (typeof window !== 'undefined') {
+      window.addEventListener('online', () => {
+        void this.syncTime().catch(() => undefined);
+        void this.flushQueue();
+      });
+    }
     void this.flushQueue();
+    void this.ensurePushSyncedOnce();
+  }
+
+  onSyncChange(cb: () => void): () => void {
+    this.syncListeners.add(cb);
+    return () => this.syncListeners.delete(cb);
+  }
+
+  onAuthLost(cb: () => void): () => void {
+    this.authLostListeners.add(cb);
+    return () => this.authLostListeners.delete(cb);
+  }
+
+  private emitSync() {
+    for (const cb of this.syncListeners) cb();
+  }
+
+  private emitAuthLost() {
+    for (const cb of this.authLostListeners) cb();
   }
 
   popNotice(): string | null {
@@ -46,10 +118,25 @@ export class HttpBackend implements Backend {
     return Date.now() + this.offset;
   }
 
-  private async req<T>(method: string, path: string, body?: unknown, auth = true): Promise<T> {
+  private clearAuthState(notify: boolean) {
+    const hadAuth = Boolean(this.token || this.user);
+    this.token = null;
+    this.user = null;
+    localStorage.removeItem(TOKEN);
+    this.saveQueue([]);
+    try {
+      if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(PUSH_SYNCED);
+    } catch {
+      /* ignore */
+    }
+    if (notify && hadAuth) this.emitAuthLost();
+  }
+
+  private async req<T>(method: string, path: string, body?: unknown, auth = true, tokenOverride?: string): Promise<T> {
     const headers: Record<string, string> = {};
     if (body !== undefined) headers['content-type'] = 'application/json';
-    if (auth && this.token) headers.authorization = `Bearer ${this.token}`;
+    const bearer = tokenOverride ?? (auth ? this.token : null);
+    if (bearer) headers.authorization = `Bearer ${bearer}`;
     let res: Response;
     try {
       res = await fetch(path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
@@ -68,46 +155,103 @@ export class HttpBackend implements Backend {
       } catch {
         /* ignore */
       }
+      if (res.status === 401 && auth && !tokenOverride) {
+        this.clearAuthState(true);
+      }
       throw code ? ApiError.fromCode(res.status, code, params, msg) : new ApiError(res.status, msg);
     }
     if (res.status === 204) return undefined as T;
     return (await res.json()) as T;
   }
 
-  async me() {
+  async me(): Promise<User | null> {
     if (!this.token) return null;
     if (this.user) return this.user;
+    return this.refreshMe(true);
+  }
+
+  async refreshMe(allowOfflineFallback = false): Promise<User | null> {
+    if (!this.token) return null;
     try {
       this.user = await this.req<User>('GET', '/api/me');
       this.local.ensureUser(this.user);
       return this.user;
     } catch (e) {
-      if (e instanceof ApiError && e.status === 401) {
-        this.token = null;
-        localStorage.removeItem(TOKEN);
-        return null;
+      if (e instanceof ApiError && e.status === 401) return null;
+      if (allowOfflineFallback && e instanceof ApiError && e.status === 0) {
+        const cached = await this.local.me();
+        if (cached) {
+          this.user = cached;
+          return cached;
+        }
       }
       throw e;
     }
   }
 
-  private setAuth(r: { userId: string; token: string }, name: string) {
+  private setAuth(r: { userId: string; token: string; deviceId?: string }, name: string) {
+    const prevId = this.user?.id;
     this.token = r.token;
     localStorage.setItem(TOKEN, r.token);
-    this.user = { id: r.userId, name };
+    this.user = { id: r.userId, name, deviceId: r.deviceId };
     this.local.ensureUser(this.user);
+    // Drop queued writes belonging to any other (or untagged legacy) account so they never leak across accounts.
+    if (prevId !== r.userId) {
+      const filtered = this.queue().filter((x) => x.userId === r.userId);
+      if (filtered.length !== this.queue().length) this.saveQueue(filtered);
+    }
+    try {
+      if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(PUSH_SYNCED);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  private async ensurePushSyncedOnce() {
+    if (!this.token || typeof sessionStorage === 'undefined') return;
+    try {
+      if (sessionStorage.getItem(PUSH_SYNCED) === this.token) return;
+      const sub = await currentSubscription();
+      if (!sub) return;
+      await this.pushSubscribe(sub.toJSON());
+      sessionStorage.setItem(PUSH_SYNCED, this.token);
+    } catch {
+      /* best-effort */
+    }
+  }
+
+  private async rebindPushOnAccountSwitch(prevToken: string | null) {
+    try {
+      const sub = await currentSubscription();
+      if (!sub) return;
+      if (prevToken && prevToken !== this.token) {
+        await this.req('DELETE', '/api/push/subscribe', { endpoint: sub.endpoint }, false, prevToken).catch(() => undefined);
+      }
+      if (this.token) {
+        await this.pushSubscribe(sub.toJSON()).catch(() => undefined);
+        if (typeof sessionStorage !== 'undefined') sessionStorage.setItem(PUSH_SYNCED, this.token);
+      }
+    } catch {
+      /* best-effort */
+    }
   }
 
   async register(name: string) {
-    const r = await this.req<{ userId: string; token: string }>('POST', '/api/users', { name }, false);
+    const r = await this.req<{ userId: string; token: string; deviceId?: string }>(
+      'POST',
+      '/api/users',
+      { name, deviceLabel: detectDeviceLabel() },
+      false,
+    );
     this.setAuth(r, name);
-    return this.user!;
+    this.user = { ...this.user!, deviceCount: 1, challengeCount: 0 };
+    return this.user;
   }
 
   async rename(name: string) {
     await this.req('PUT', '/api/me', { name });
     if (this.user) {
-      this.user.name = name;
+      this.user = { ...this.user, name };
       this.local.ensureUser(this.user);
     }
   }
@@ -117,9 +261,44 @@ export class HttpBackend implements Backend {
   }
 
   async claim(code: string) {
-    const r = await this.req<{ userId: string; token: string; name: string }>('POST', '/api/users/claim', { code: code.trim().toUpperCase() }, false);
+    const prevToken = this.token;
+    const r = await this.req<{ userId: string; token: string; name: string; deviceId?: string }>(
+      'POST',
+      '/api/users/claim',
+      { code: code.trim().toUpperCase(), deviceLabel: detectDeviceLabel() },
+      false,
+    );
     this.setAuth(r, r.name);
+    await this.rebindPushOnAccountSwitch(prevToken);
+    try {
+      const fresh = await this.refreshMe();
+      if (fresh) return fresh;
+    } catch {
+      /* fallback to basic user returned by claim */
+    }
     return this.user!;
+  }
+
+  devices() {
+    return this.req<DeviceSession[]>('GET', '/api/me/devices');
+  }
+
+  async revokeDevice(id: string) {
+    const isSelf = id === this.user?.deviceId;
+    if (isSelf) {
+      try {
+        const sub = await currentSubscription();
+        if (sub) await this.pushUnsubscribe(sub.endpoint).catch(() => undefined);
+      } catch {
+        /* ignore */
+      }
+    }
+    await this.req('DELETE', `/api/me/devices/${encodeURIComponent(id)}`);
+    if (isSelf) {
+      this.clearAuthState(true);
+    } else if (this.user && typeof this.user.deviceCount === 'number') {
+      this.user = { ...this.user, deviceCount: Math.max(1, this.user.deviceCount - 1) };
+    }
   }
 
   async listChallenges() {
@@ -150,23 +329,47 @@ export class HttpBackend implements Backend {
     return this.req<Challenge>('GET', `/api/challenges/${id}`);
   }
 
-  async putEvent(id: string, day: number, kind: EventKind, payload: unknown) {
+  async putEvent(id: string, day: number, kind: EventKind, payload: unknown, opts?: { expectedSeq?: number }): Promise<PutEventResult> {
     if (id === DRY_RUN_ID) return this.local.putEvent(id, day, kind, payload);
+    const body = opts?.expectedSeq !== undefined ? { payload, expectedSeq: opts.expectedSeq } : { payload };
     try {
-      await this.req('PUT', `/api/challenges/${id}/days/${day}/${kind}`, { payload });
+      await this.req('PUT', `/api/challenges/${id}/days/${day}/${kind}`, body);
+      // Remove any stale offline-queued write for the same slot now that the server has a newer write.
+      const prev = this.queue();
+      const next = prev.filter((x) => !(x.id === id && x.day === day && x.kind === kind));
+      if (next.length !== prev.length) this.saveQueue(next);
+      return 'synced';
     } catch (e) {
       if (e instanceof ApiError && e.status === 0 && kind !== 'hash') {
-        this.enqueue({ id, day, kind, payload });
-        return;
+        this.enqueue({ userId: this.user?.id, id, day, kind, payload });
+        return 'queued';
       }
       throw e;
     }
   }
 
+  async markSeen(id: string, day: number): Promise<number> {
+    if (id === DRY_RUN_ID) return this.local.markSeen(id, day);
+    const r = await this.req<{ seenDay: number }>('PUT', `/api/challenges/${id}/seen`, { day });
+    return r.seenDay;
+  }
+
+  pendingEvents(id: string): PendingEvent[] {
+    const uid = this.user?.id;
+    return this.queue()
+      .filter((x) => x.id === id && (!uid || !x.userId || x.userId === uid))
+      .map(({ id: cid, day, kind, payload }) => ({ id: cid, day, kind, payload }));
+  }
+
+  private saveQueue(q: QueuedPut[]) {
+    localStorage.setItem(QUEUE, JSON.stringify(q));
+    this.emitSync();
+  }
+
   private enqueue(p: QueuedPut) {
     const q = this.queue().filter((x) => !(x.id === p.id && x.day === p.day && x.kind === p.kind));
     q.push(p);
-    localStorage.setItem(QUEUE, JSON.stringify(q));
+    this.saveQueue(q);
   }
 
   private queue(): QueuedPut[] {
@@ -187,24 +390,32 @@ export class HttpBackend implements Backend {
   }
 
   private async doFlush(): Promise<string[]> {
+    if (!this.token) return [];
+    const uid = this.user?.id;
     const q = this.queue();
     if (!q.length) return [];
     const done = new Set<QueuedPut>();
     const dropped: string[] = [];
     for (const p of q) {
+      if (uid && p.userId && p.userId !== uid) {
+        done.add(p);
+        continue;
+      }
       try {
         await this.req('PUT', `/api/challenges/${p.id}/days/${p.day}/${p.kind}`, { payload: p.payload });
         done.add(p);
       } catch (e) {
         if (e instanceof ApiError && (e.status === 0 || e.status === 429 || e.status >= 500)) continue;
         done.add(p);
+        if (e instanceof ApiError && e.status === 401) break;
         dropped.push(translateQueuedDrop(p.kind, p.day, (e as Error).message));
       }
     }
-    // keep entries that failed with a network error, plus anything enqueued while flushing
-    const key = (x: QueuedPut) => `${x.id}|${x.day}|${x.kind}|${JSON.stringify(x.payload)}`;
-    const doneKeys = new Set([...done].map(key));
-    localStorage.setItem(QUEUE, JSON.stringify(this.queue().filter((x) => !doneKeys.has(key(x)))));
+    if (done.size > 0) {
+      const key = (x: QueuedPut) => `${x.userId ?? ''}|${x.id}|${x.day}|${x.kind}|${JSON.stringify(x.payload)}`;
+      const doneKeys = new Set([...done].map(key));
+      this.saveQueue(this.queue().filter((x) => !doneKeys.has(key(x))));
+    }
     this.notices.push(...dropped);
     return dropped;
   }
@@ -216,10 +427,13 @@ export class HttpBackend implements Backend {
     const all: GameEvent[] = [];
     let cursor = Math.max(0, since);
     for (let page = 0; page < 20; page++) {
+      const t0 = Date.now();
       const r = await this.req<{ events: GameEvent[]; now: number; hasMore?: boolean; nextSince?: number | null }>(
         'GET',
         `/api/challenges/${id}/events?since=${cursor}`,
       );
+      const t1 = Date.now();
+      if (typeof r.now === 'number') this.offset = r.now - (t0 + t1) / 2;
       if (!r.events.length) break;
       all.push(...r.events);
       const lastSeq = r.nextSince ?? r.events[r.events.length - 1].seq;
@@ -243,6 +457,13 @@ export class HttpBackend implements Backend {
 
   async pushSubscribe(sub: PushSubscriptionJSON) {
     await this.req('POST', '/api/push/subscribe', sub);
+    if (this.token && typeof sessionStorage !== 'undefined') {
+      try {
+        sessionStorage.setItem(PUSH_SYNCED, this.token);
+      } catch {
+        /* ignore */
+      }
+    }
   }
 
   async pushUnsubscribe(endpoint: string) {

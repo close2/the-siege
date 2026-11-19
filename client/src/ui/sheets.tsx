@@ -11,6 +11,7 @@ import { repairCost, upgradeCost } from '../sim/orders';
 import { seasonRank } from '../sim/season';
 import type { BuildingType, Checkin, DayReport, Dir, EnemyRole, Order, PadId, PlayerId } from '../sim/types';
 import { DIRS } from '../sim/types';
+import { pickDefaultCheckinDay } from '../state/seasonHelpers';
 import type { SeasonView } from '../state/useSeason';
 import { Gold, Icon, PLAYER_COLORS, RichText, Sheet, Stars, cssColor, getHeroInfo, portraitUrl } from './common';
 
@@ -57,7 +58,7 @@ export function CheckInSheet({ view, onSave, onClose }: { view: SeasonView; onSa
   const { t } = useTranslation();
   const cfg = view.setup.config;
   const days = view.clock.open;
-  const [day, setDay] = useState(days[days.length - 1]);
+  const [day, setDay] = useState(() => pickDefaultCheckinDay(days, (d) => Boolean(view.myCheckin(d))) ?? days[days.length - 1]);
   const existing = view.myCheckin(day);
   const [kept, setKept] = useState<boolean[]>(() => (existing && 'kept' in existing ? existing.kept : cfg.rules.map(() => false)));
   const [value, setValue] = useState<string>(existing && 'value' in existing ? String(existing.value) : '');
@@ -94,13 +95,20 @@ export function CheckInSheet({ view, onSave, onClose }: { view: SeasonView; onSa
     <Sheet onClose={onClose}>
       <h2>{t('checkin.title')}</h2>
       {days.length > 1 && (
-        <div className="row" style={{ marginBottom: 8 }}>
-          {days.map((d) => (
-            <button key={d} className={'btn small' + (d === day ? ' gold' : '')} onClick={() => switchDay(d)}>
-              {t('checkin.dayButton', { day: d, check: view.myCheckin(d) ? ' ✓' : '' })}
-            </button>
-          ))}
-        </div>
+        <>
+          <div className="row" style={{ marginBottom: 4 }}>
+            {days.map((d) => (
+              <button key={d} className={'btn small' + (d === day ? ' gold' : '')} onClick={() => switchDay(d)}>
+                {t('checkin.dayButton', { day: d, check: view.myCheckin(d) ? ' ✓' : '' })}
+              </button>
+            ))}
+          </div>
+          {!view.myCheckin(days[0]) && (
+            <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
+              {t('checkin.twoDaysOpenHint', { urgentDay: days[0] })}
+            </div>
+          )}
+        </>
       )}
       <div className="muted" style={{ marginBottom: 8 }}>
         {t('checkin.dayDateHint', { day, date: formatWeekdayDate(w.date) })}
@@ -550,9 +558,10 @@ export function DawnReport({ view, report, onClose, onReplay }: { view: SeasonVi
         <div className="row" style={{ flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
           {view.setup.players.map((p, i) => {
             const pr = report.players[p.id];
+            const mark = pr.r === null ? '—' : pr.r >= 1 ? '✔' : pr.r > 0 ? `${Math.round(pr.r * 100)}%` : '✗';
             return (
               <span key={p.id} className="chip" style={{ borderColor: cssColor(PLAYER_COLORS[i % 8]), color: '#fff' }}>
-                {p.name}: {pr.r === null ? '—' : pr.r >= 1 ? '✔' : '✗'}
+                {p.name}: {mark}
               </span>
             );
           })}

@@ -4,7 +4,7 @@ import { SIM_VERSION } from '../content/stats';
 import i18n from '../i18n';
 import { isWritable, localDate, seasonClock } from '../sim/calendar';
 import type { ChallengeConfig, HeroClass } from '../sim/types';
-import { ApiError, DRY_RUN_ID, type Backend, type Challenge, type ChallengeSummary, type EventKind, type GameEvent, type User } from './types';
+import { ApiError, DRY_RUN_ID, type Backend, type Challenge, type ChallengeSummary, type EventKind, type GameEvent, type PutEventResult, type User } from './types';
 
 interface LocalData {
   user: User | null;
@@ -212,7 +212,7 @@ export class LocalBackend implements Backend {
     return c;
   }
 
-  async putEvent(id: string, day: number, kind: EventKind, payload: unknown) {
+  async putEvent(id: string, day: number, kind: EventKind, payload: unknown): Promise<PutEventResult> {
     const c = await this.getChallenge(id);
     const u = this.data.user!;
     const now = this.now(id);
@@ -225,6 +225,17 @@ export class LocalBackend implements Backend {
     if (i >= 0) list.splice(i, 1);
     list.push({ seq: ++this.data.seq, day, userId: u.id, kind, payload, updatedAt: now });
     this.save();
+    return 'synced';
+  }
+
+  async markSeen(id: string, day: number): Promise<number> {
+    const c = this.data.challenges.find((x) => x.id === id);
+    if (c) {
+      c.seenDay = Math.max(c.seenDay ?? 0, day);
+      this.save();
+      return c.seenDay;
+    }
+    return day;
   }
 
   async events(id: string, since: number) {

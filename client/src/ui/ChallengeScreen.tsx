@@ -21,7 +21,7 @@ type SheetState = { kind: 'checkin' } | { kind: 'build'; pad: PadId } | { kind: 
 export function ChallengeScreen({ id }: { id: string }) {
   const { t, i18n } = useTranslation();
   const { backend, user, navigate } = useApp();
-  const { view, error, putCheckin, putOrders, refresh, reload } = useSeason(backend, id, user.id);
+  const { view, error, putCheckin, putOrders, markSeen, refresh, reload } = useSeason(backend, id, user.id);
   const gv = useRef<GameView | null>(null);
   const [ready, setReady] = useState(false);
   const [sheet, setSheet] = useState<SheetState>(null);
@@ -142,12 +142,12 @@ export function ChallengeScreen({ id }: { id: string }) {
         const rep = view.reports[day - 1];
         sound.play(rep.keepFell ? 'defeat' : rep.stars >= 2 ? 'victory' : 'horn');
         setSheet({ kind: 'report', day });
-        localStorage.setItem(seenKey, String(Math.max(day, Number(localStorage.getItem(seenKey) ?? 0))));
+        markSeen(day);
       };
       setReplay({ day, player: p });
       if (view.battles[day - 1].rally) setTimeout(() => sound.play('horn'), 300);
     },
-    [view, owners, user.id, speed, myFocus, seenKey],
+    [view, owners, user.id, speed, myFocus, markSeen],
   );
 
   const endReplay = () => {
@@ -155,15 +155,15 @@ export function ChallengeScreen({ id }: { id: string }) {
     setReplay(null);
   };
 
-  // unseen Dawn → offer replay
+  // unseen Dawn → offer replay (synced across devices via challenge.seenDay + localStorage)
   const resolved = view?.clock.resolved ?? 0;
-  const seen = Number(localStorage.getItem(seenKey) ?? 0);
+  const seen = Math.max(Number(localStorage.getItem(seenKey) ?? 0), view?.challenge.seenDay ?? 0);
   const unseenDawn = resolved > 0 && seen < resolved ? resolved : null;
 
   const doCheckin = async (day: number, c: Checkin) => {
-    await putCheckin(day, c);
+    const res = await putCheckin(day, c);
     sound.play('coin');
-    setToast(t('hud.reportedToast'));
+    setToast(res === 'queued' ? t('hud.reportedOfflineToast') : t('hud.reportedToast'));
   };
 
   const doOrders = (orders: Order[]) => {
@@ -297,7 +297,7 @@ export function ChallengeScreen({ id }: { id: string }) {
           {view.challenge.members.map((m, i) => (
             <div key={m.userId} className="row selectable">
               <img src={portraitUrl(m.heroClass)} width={40} height={40} style={{ borderRadius: '50%', objectFit: 'cover', objectPosition: 'top', border: `3px solid ${cssColor(PLAYER_COLORS[i % 8])}` }} alt="" />
-              <b>{m.name}</b>
+              <b>{owners[m.userId]?.name ?? m.name}</b>
               {m.bot && <span className="muted">{t('common.bot')}</span>}
             </div>
           ))}
@@ -354,12 +354,14 @@ export function ChallengeScreen({ id }: { id: string }) {
             .slice()
             .sort((a, b) => a.joinOrder - b.joinOrder)
             .map((m, i) => {
-              const done = view.planDay ? clock.open.every((d) => view.checkedIn(d, m.userId)) : true;
+              const targetDay = view.planDay ?? clock.open[0] ?? null;
+              const done = targetDay ? view.checkedIn(targetDay, m.userId) : true;
+              const label = owners[m.userId]?.name ?? m.name;
               return (
-                <div key={m.userId} className={'avatar' + (done ? '' : ' dim')} style={{ '--c': cssColor(PLAYER_COLORS[i % 8]) } as React.CSSProperties} title={m.name}>
+                <div key={m.userId} className={'avatar' + (done ? '' : ' dim')} style={{ '--c': cssColor(PLAYER_COLORS[i % 8]) } as React.CSSProperties} title={label}>
                   <img src={portraitUrl(m.heroClass)} alt="" />
-                  {done && clock.open.length > 0 && <Icon id="check" size={18} style={{ position: 'absolute', right: -2, top: 26 }} />}
-                  <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.userId === me ? t('common.you') : m.name}</div>
+                  {done && targetDay !== null && <Icon id="check" size={18} style={{ position: 'absolute', right: -2, top: 26 }} />}
+                  <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.userId === me ? t('common.you') : label}</div>
                 </div>
               );
             })}
@@ -389,6 +391,16 @@ export function ChallengeScreen({ id }: { id: string }) {
           <div className="error" style={{ fontSize: 12 }}>
             {t('hud.simMismatch', { challengeVer: view.challenge.simVersion, appVer: SIM_VERSION })}
           </div>
+        )}
+        {view.pendingCount > 0 && (
+          <button
+            type="button"
+            className="chip"
+            style={{ cursor: 'pointer', alignSelf: 'center', borderColor: 'var(--gold)', color: 'var(--gold)', fontSize: 12 }}
+            onClick={() => void refresh()}
+          >
+            {t('hud.pendingSync', { count: view.pendingCount })}
+          </button>
         )}
         {view.desyncDay && <div className="error" style={{ fontSize: 12 }}>{t('hud.desyncWarning', { day: view.desyncDay })}</div>}
         {error && <div className="error" style={{ fontSize: 12 }}>{error}</div>}

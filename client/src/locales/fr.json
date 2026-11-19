@@ -153,6 +153,9 @@
     "backToPlots": "Retour à mes emplacements",
     "ownersPlot": "Emplacement de {{name}}",
     "reportedToast": "Bilan enregistré — merci, défenseur !",
+    "reportedOfflineToast": "Enregistré hors ligne — synchronisé dès le retour du réseau.",
+    "pendingSync_one": "Hors ligne · {{count}} modification en attente (appuyez pour réessayer)",
+    "pendingSync_other": "Hors ligne · {{count}} modifications en attente (appuyez pour réessayer)",
     "inviteCopiedToast": "Code d'invitation {{code}} copié"
   },
   "replay": {
@@ -208,6 +211,7 @@
     "title": "Bilan du jour",
     "dayButton": "Jour {{day}}{{check}}",
     "dayDateHint": "Jour {{day}} · {{date}} — modifiable jusqu'à l'Aube.",
+    "twoDaysOpenHint": "Le jour {{urgentDay}} se ferme à l'Aube — vérifiez que vous déclarez le bon jour.",
     "allKept": "Tout accompli",
     "howMuchLower": "Combien ? (objectif : au maximum {{target}} {{unit}})",
     "howMuchHigher": "Combien ? (objectif : {{target}} {{unit}})",
@@ -530,6 +534,8 @@
     "day_not_resolved": "Ce jour n'est pas encore résolu.",
     "day_not_started": "Ce jour n'a pas encore commencé.",
     "day_closed": "Ce jour est clos — l'Aube est passée.",
+    "event_conflict": "Mis à jour sur un autre appareil — vos derniers changements ont été rechargés.",
+    "device_not_found": "Appareil introuvable.",
     "push_disabled": "Les notifications push sont désactivées sur le serveur.",
     "invalid_endpoint": "Point de terminaison push invalide.",
     "queued_write_dropped": "Votre {{kindLabel}} du jour {{day}} n'a pas pu être enregistré : {{reason}}",

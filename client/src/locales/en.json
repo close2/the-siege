@@ -153,6 +153,9 @@
     "backToPlots": "Back to my plots",
     "ownersPlot": "{{name}}'s plot",
     "reportedToast": "Reported — thank you, defender!",
+    "reportedOfflineToast": "Saved offline — will sync when online.",
+    "pendingSync_one": "Offline · {{count}} change waiting to sync (tap to retry)",
+    "pendingSync_other": "Offline · {{count}} changes waiting to sync (tap to retry)",
     "inviteCopiedToast": "Invite code {{code}} copied"
   },
   "replay": {
@@ -208,6 +211,7 @@
     "title": "Check in",
     "dayButton": "Day {{day}}{{check}}",
     "dayDateHint": "Day {{day}} · {{date}} — editable until Dawn.",
+    "twoDaysOpenHint": "Day {{urgentDay}} closes at Dawn — make sure you report the right day.",
     "allKept": "All kept",
     "howMuchLower": "How much? (target: at most {{target}} {{unit}})",
     "howMuchHigher": "How much? (target: {{target}} {{unit}})",
@@ -530,6 +534,8 @@
     "day_not_resolved": "This day has not resolved yet.",
     "day_not_started": "This day has not started yet.",
     "day_closed": "This day is closed — Dawn has passed.",
+    "event_conflict": "Updated on another device — reloaded your latest changes.",
+    "device_not_found": "Device not found.",
     "push_disabled": "Push notifications are disabled on the server.",
     "invalid_endpoint": "Invalid push endpoint.",
     "queued_write_dropped": "Your {{kindLabel}} for day {{day}} could not be saved: {{reason}}",

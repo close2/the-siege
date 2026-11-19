@@ -153,6 +153,9 @@
     "backToPlots": "Zurück zu meinen Bauplätzen",
     "ownersPlot": "Bauplatz von {{name}}",
     "reportedToast": "Gemeldet — danke, Verteidiger!",
+    "reportedOfflineToast": "Offline gespeichert — wird synchronisiert, sobald du wieder online bist.",
+    "pendingSync_one": "Offline · {{count}} Änderung wartet auf Synchronisation (tippen zum Wiederholen)",
+    "pendingSync_other": "Offline · {{count}} Änderungen warten auf Synchronisation (tippen zum Wiederholen)",
     "inviteCopiedToast": "Einladungscode {{code}} kopiert"
   },
   "replay": {
@@ -208,6 +211,7 @@
     "title": "Tagesmeldung",
     "dayButton": "Tag {{day}}{{check}}",
     "dayDateHint": "Tag {{day}} · {{date}} — änderbar bis zum Morgengrauen.",
+    "twoDaysOpenHint": "Tag {{urgentDay}} endet im Morgengrauen — achte darauf, den richtigen Tag zu melden.",
     "allKept": "Alle erfüllt",
     "howMuchLower": "Wie viel? (Ziel: höchstens {{target}} {{unit}})",
     "howMuchHigher": "Wie viel? (Ziel: {{target}} {{unit}})",
@@ -530,6 +534,8 @@
     "day_not_resolved": "Dieser Tag wurde noch nicht ausgewertet.",
     "day_not_started": "Dieser Tag hat noch nicht begonnen.",
     "day_closed": "Dieser Tag ist geschlossen — das Morgengrauen ist vorüber.",
+    "event_conflict": "Auf einem anderen Gerät aktualisiert — deine neuesten Änderungen wurden geladen.",
+    "device_not_found": "Gerät nicht gefunden.",
     "push_disabled": "Push-Benachrichtigungen sind auf dem Server deaktiviert.",
     "invalid_endpoint": "Ungültiger Push-Endpunkt.",
     "queued_write_dropped": "Deine {{kindLabel}} für Tag {{day}} konnte nicht gespeichert werden: {{reason}}",

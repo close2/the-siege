@@ -4,11 +4,12 @@ import type { Backend } from './types';
 
 let backend: Backend | null = null;
 
-/** Uses the server if /api/time answers, otherwise the offline demo backend. */
+/** Uses the server if /api/time answers or if an existing online token is present; otherwise the offline demo backend. */
 export async function getBackend(): Promise<Backend> {
   if (backend) return backend;
   const forced = new URLSearchParams(location.search).get('backend') ?? localStorage.getItem('siege.backend');
   if (forced !== 'local') {
+    const hasToken = Boolean(localStorage.getItem('siege.token'));
     try {
       const ctrl = new AbortController();
       const t = setTimeout(() => ctrl.abort(), 2500);
@@ -22,6 +23,13 @@ export async function getBackend(): Promise<Backend> {
       }
     } catch {
       /* fall through */
+    }
+    // Never silently downgrade a signed-in online user into offline demo mode on a transient startup timeout.
+    if (hasToken) {
+      const h = new HttpBackend();
+      await h.init();
+      backend = h;
+      return h;
     }
   }
   const l = new LocalBackend();
