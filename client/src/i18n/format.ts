@@ -20,6 +20,13 @@ export function formatWeekdayDate(isoDate: string, locale: Locale = getLanguage(
   return new Intl.DateTimeFormat(locale, { weekday: 'long', day: 'numeric', month: 'short' }).format(d);
 }
 
+/** Formats a Unix timestamp (ms) into a short localized date + time string (for linked devices). */
+export function formatDateTime(tsMs: number, locale: Locale = getLanguage()): string {
+  const d = new Date(tsMs);
+  if (Number.isNaN(d.getTime())) return '';
+  return new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(d);
+}
+
 /** Translates a server/backend error code + params into a localized message, falling back to `fallback` if unknown. */
 export function translateApiError(code?: string, params?: Record<string, unknown>, fallback?: string): string {
   if (code) {

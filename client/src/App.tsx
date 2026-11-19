@@ -6,6 +6,7 @@ import { ChallengeScreen } from './ui/ChallengeScreen';
 import { CreateChallenge } from './ui/CreateChallenge';
 import { Home } from './ui/Home';
 import { Join } from './ui/Join';
+import { LinkDevice } from './ui/LinkDevice';
 import { Onboarding } from './ui/Onboarding';
 import { Settings } from './ui/Settings';
 import { TutorialScreen } from './ui/Tutorial';
@@ -25,6 +26,15 @@ interface AppCtx {
 
 const Ctx = createContext<AppCtx | null>(null);
 export const useApp = () => useContext(Ctx)!;
+
+function extractLinkCode(): string {
+  if (location.pathname !== '/link') return '';
+  const raw = location.hash.replace(/^#/, '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (raw) {
+    history.replaceState(null, '', '/link');
+  }
+  return raw.slice(0, 12);
+}
 
 function usePath(): [string, (p: string) => void] {
   const [path, setPath] = useState(location.pathname);
@@ -47,6 +57,15 @@ export function App() {
   const [backend, setBackend] = useState<Backend | null>(null);
   const [user, setUser] = useState<User | null | undefined>(undefined);
   const [fatal, setFatal] = useState<string | null>(null);
+  const [authNotice, setAuthNotice] = useState<string | null>(null);
+  const [linkCode, setLinkCode] = useState<string>(() => extractLinkCode());
+
+  useEffect(() => {
+    if (path === '/link') {
+      const extracted = extractLinkCode();
+      if (extracted) setLinkCode(extracted);
+    }
+  }, [path]);
 
   useEffect(() => {
     if (path.startsWith('/dev/')) return;
@@ -57,6 +76,32 @@ export function App() {
       })
       .catch((e) => setFatal(String(e)));
   }, [path]);
+
+  // Listen for session revocation (401 or self sign-out) and keep user metadata fresh across devices.
+  useEffect(() => {
+    if (!backend) return;
+    const unsub = backend.onAuthLost?.(() => {
+      setUser(null);
+      setAuthNotice(t('onboarding.sessionEnded'));
+    });
+    const refreshUser = () => {
+      if (document.visibilityState === 'visible') {
+        void backend
+          .refreshMe?.()
+          .then((u) => {
+            if (u) setUser(u);
+          })
+          .catch(() => undefined);
+      }
+    };
+    document.addEventListener('visibilitychange', refreshUser);
+    window.addEventListener('focus', refreshUser);
+    return () => {
+      unsub?.();
+      document.removeEventListener('visibilitychange', refreshUser);
+      window.removeEventListener('focus', refreshUser);
+    };
+  }, [backend, t]);
 
   if (path.startsWith('/dev/')) {
     const tool = path.startsWith('/dev/sandbox') ? (
@@ -84,13 +129,26 @@ export function App() {
   const joinMatch = path.match(/^\/join\/([A-Za-z0-9]+)/);
   if (!user) {
     if (joinMatch) sessionStorage.setItem('siege.pendingJoin', joinMatch[1]);
-    return <Onboarding backend={backend} onDone={setUser} />;
+    return (
+      <Onboarding
+        backend={backend}
+        initialCode={linkCode}
+        notice={authNotice}
+        onDone={(u) => {
+          setAuthNotice(null);
+          setLinkCode('');
+          setUser(u);
+          if (path === '/link') navigate('/');
+        }}
+      />
+    );
   }
 
   const ctx: AppCtx = { backend, user, setUser, navigate };
   let screen;
   const cMatch = path.match(/^\/c\/([A-Za-z0-9]+)/);
-  if (joinMatch) screen = <Join code={joinMatch[1]} />;
+  if (path === '/link' && backend.mode === 'http') screen = <LinkDevice initialCode={linkCode} onClearCode={() => setLinkCode('')} />;
+  else if (joinMatch) screen = <Join code={joinMatch[1]} />;
   else if (cMatch) screen = <ChallengeScreen key={cMatch[1]} id={cMatch[1]} />;
   else if (path === '/new') screen = <CreateChallenge />;
   else if (path === '/tutorial') screen = <TutorialScreen />;
