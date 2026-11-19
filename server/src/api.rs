@@ -12,7 +12,7 @@ use axum::{
     http::{request::Parts, StatusCode},
     middleware::{self, Next},
     response::{IntoResponse, Response},
-    routing::{get, post, put},
+    routing::{delete, get, post, put},
     Json, Router,
 };
 use rand::Rng;
@@ -27,6 +27,8 @@ const MAX_PAYLOAD: usize = 8 * 1024;
 const TRANSFER_CODE_LEN: usize = 8;
 const MAX_TOKENS_PER_USER: i64 = 20;
 const MAX_PUSH_SUBS_PER_USER: i64 = 10;
+const TOKEN_TOUCH_INTERVAL_MS: i64 = 60 * 60 * 1000;
+const MAX_DEVICE_LABEL_LEN: usize = 48;
 const DEFAULT_EVENTS_LIMIT: usize = 500;
 const MAX_EVENTS_LIMIT: usize = 1000;
 /// Themes whose art is complete (mirror of `ready` in client/src/content/themes.ts).
@@ -96,6 +98,8 @@ fn hash_token(t: &str) -> String {
 pub struct AuthUser {
     pub id: String,
     pub name: String,
+    pub token_hash: String,
+    pub device_id: String,
 }
 
 impl FromRequestParts<AppState> for AuthUser {
@@ -104,36 +108,63 @@ impl FromRequestParts<AppState> for AuthUser {
     async fn from_request_parts(parts: &mut Parts, state: &AppState) -> Result<Self, Self::Rejection> {
         let header = parts.headers.get("authorization").and_then(|h| h.to_str().ok()).unwrap_or("");
         let token = header.strip_prefix("Bearer ").ok_or_else(|| err(StatusCode::UNAUTHORIZED, "missing_token", "missing token"))?;
+        let token_hash = hash_token(token);
         let db = state.db.lock().unwrap();
         let row = db
-            .query_row("SELECT u.id, u.name FROM tokens t JOIN users u ON u.id = t.user_id WHERE t.token_hash = ?1", params![hash_token(token)], |r| {
-                Ok(AuthUser { id: r.get(0)?, name: r.get(1)? })
-            })
+            .query_row(
+                "SELECT u.id, u.name, COALESCE(t.id, substr(t.token_hash, 1, 16)), t.last_used_at
+                 FROM tokens t JOIN users u ON u.id = t.user_id
+                 WHERE t.token_hash = ?1",
+                params![token_hash],
+                |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, String>(2)?, r.get::<_, Option<i64>>(3)?)),
+            )
             .optional()?;
-        row.ok_or_else(|| err(StatusCode::UNAUTHORIZED, "invalid_token", "invalid token"))
+        let Some((id, name, device_id, last_used_at)) = row else {
+            return Err(err(StatusCode::UNAUTHORIZED, "invalid_token", "invalid token"));
+        };
+        let now = now_ms();
+        if last_used_at.map(|ts| now.saturating_sub(ts) >= TOKEN_TOUCH_INTERVAL_MS).unwrap_or(true) {
+            let _ = db.execute("UPDATE tokens SET last_used_at = ?1 WHERE token_hash = ?2", params![now, token_hash]);
+        }
+        Ok(AuthUser { id, name, token_hash, device_id })
     }
 }
 
-fn issue_token(db: &rusqlite::Connection, user_id: &str) -> ApiResult<String> {
+fn clean_device_label(raw: Option<&str>) -> Option<String> {
+    let cleaned: String = raw?.trim().chars().filter(|c| !c.is_control()).take(MAX_DEVICE_LABEL_LEN).collect();
+    let trimmed = cleaned.trim();
+    if trimmed.is_empty() {
+        None
+    } else {
+        Some(trimmed.to_string())
+    }
+}
+
+fn issue_token(db: &rusqlite::Connection, user_id: &str, label: Option<&str>) -> ApiResult<(String, String)> {
     let token = {
         let mut b = [0u8; 32];
         rand::thread_rng().fill(&mut b);
         base64::Engine::encode(&base64::engine::general_purpose::URL_SAFE_NO_PAD, b)
     };
+    let device_id = format!("d{}", random_hex(8));
+    let label = clean_device_label(label);
     let now = now_ms();
-    db.execute("INSERT INTO tokens (token_hash, user_id, created_at) VALUES (?1, ?2, ?3)", params![hash_token(&token), user_id, now])?;
+    db.execute(
+        "INSERT INTO tokens (token_hash, user_id, created_at, id, label, last_used_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+        params![hash_token(&token), user_id, now, device_id, label, now],
+    )?;
     db.execute(
         "DELETE FROM tokens
          WHERE user_id = ?1
            AND token_hash NOT IN (
              SELECT token_hash FROM tokens
              WHERE user_id = ?1
-             ORDER BY created_at DESC, token_hash DESC
+             ORDER BY COALESCE(last_used_at, created_at) DESC, created_at DESC, token_hash DESC
              LIMIT ?2
            )",
         params![user_id, MAX_TOKENS_PER_USER],
     )?;
-    Ok(token)
+    Ok((token, device_id))
 }
 
 fn clean_name(n: &str) -> ApiResult<String> {
@@ -157,11 +188,14 @@ pub fn router(state: AppState) -> Router<AppState> {
         .route("/api/users", post(create_user))
         .route("/api/users/claim", post(claim))
         .route("/api/me", get(me).put(rename))
+        .route("/api/me/devices", get(list_devices))
+        .route("/api/me/devices/{id}", delete(revoke_device))
         .route("/api/me/transfer-code", post(transfer_code))
         .route("/api/challenges", get(list_challenges).post(create_challenge))
         .route("/api/challenges/by-invite/{code}", get(by_invite))
         .route("/api/challenges/join", post(join))
         .route("/api/challenges/{id}", get(get_challenge))
+        .route("/api/challenges/{id}/seen", put(put_seen))
         .route("/api/challenges/{id}/days/{day}/{kind}", put(put_event))
         .route("/api/challenges/{id}/events", get(events))
         .route("/api/push/key", get(push_key))
@@ -179,8 +213,10 @@ async fn time() -> Json<Value> {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct NameBody {
     name: String,
+    device_label: Option<String>,
 }
 
 async fn create_user(State(s): State<AppState>, ip: ClientIp, Json(b): Json<NameBody>) -> ApiResult<Json<Value>> {
@@ -191,13 +227,54 @@ async fn create_user(State(s): State<AppState>, ip: ClientIp, Json(b): Json<Name
     let db = s.db.lock().unwrap();
     let tx = db.unchecked_transaction()?;
     tx.execute("INSERT INTO users (id, name, created_at) VALUES (?1, ?2, ?3)", params![id, name, now])?;
-    let token = issue_token(&tx, &id)?;
+    let (token, device_id) = issue_token(&tx, &id, b.device_label.as_deref())?;
     tx.commit()?;
-    Ok(Json(json!({ "userId": id, "token": token })))
+    Ok(Json(json!({ "userId": id, "token": token, "deviceId": device_id })))
 }
 
-async fn me(u: AuthUser) -> Json<Value> {
-    Json(json!({ "id": u.id, "name": u.name }))
+async fn me(State(s): State<AppState>, u: AuthUser) -> ApiResult<Json<Value>> {
+    let db = s.db.lock().unwrap();
+    let device_count: i64 = db.query_row("SELECT COUNT(*) FROM tokens WHERE user_id = ?1", params![u.id], |r| r.get(0))?;
+    let challenge_count: i64 = db.query_row("SELECT COUNT(*) FROM members WHERE user_id = ?1", params![u.id], |r| r.get(0))?;
+    Ok(Json(json!({
+        "id": u.id,
+        "name": u.name,
+        "deviceId": u.device_id,
+        "deviceCount": device_count,
+        "challengeCount": challenge_count
+    })))
+}
+
+async fn list_devices(State(s): State<AppState>, u: AuthUser) -> ApiResult<Json<Value>> {
+    let db = s.db.lock().unwrap();
+    let mut stmt = db.prepare(
+        "SELECT COALESCE(id, substr(token_hash, 1, 16)), label, created_at, COALESCE(last_used_at, created_at), token_hash
+         FROM tokens
+         WHERE user_id = ?1
+         ORDER BY COALESCE(last_used_at, created_at) DESC, created_at DESC",
+    )?;
+    let list: Vec<Value> = stmt
+        .query_map(params![u.id], |r| {
+            let token_hash: String = r.get(4)?;
+            Ok(json!({
+                "id": r.get::<_, String>(0)?,
+                "label": r.get::<_, Option<String>>(1)?,
+                "createdAt": r.get::<_, i64>(2)?,
+                "lastUsedAt": r.get::<_, i64>(3)?,
+                "current": token_hash == u.token_hash
+            }))
+        })?
+        .collect::<Result<_, _>>()?;
+    Ok(Json(Value::Array(list)))
+}
+
+async fn revoke_device(State(s): State<AppState>, u: AuthUser, Path(device_id): Path<String>) -> ApiResult<StatusCode> {
+    let changed =
+        s.db.lock().unwrap().execute("DELETE FROM tokens WHERE user_id = ?1 AND COALESCE(id, substr(token_hash, 1, 16)) = ?2", params![u.id, device_id])?;
+    if changed == 0 {
+        return Err(err(StatusCode::NOT_FOUND, "device_not_found", "device not found"));
+    }
+    Ok(StatusCode::NO_CONTENT)
 }
 
 async fn rename(State(s): State<AppState>, u: AuthUser, Json(b): Json<NameBody>) -> ApiResult<StatusCode> {
@@ -224,8 +301,10 @@ async fn transfer_code(State(s): State<AppState>, ip: ClientIp, u: AuthUser) -> 
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct CodeBody {
     code: String,
+    device_label: Option<String>,
 }
 
 async fn claim(State(s): State<AppState>, ip: ClientIp, Json(b): Json<CodeBody>) -> ApiResult<Json<Value>> {
@@ -251,15 +330,15 @@ async fn claim(State(s): State<AppState>, ip: ClientIp, Json(b): Json<CodeBody>)
         match row {
             Some((user_id, name)) => {
                 tx.execute("DELETE FROM transfer_codes WHERE code_hash = ?1", params![code_hash])?;
-                let token = issue_token(&tx, &user_id)?;
+                let (token, device_id) = issue_token(&tx, &user_id, b.device_label.as_deref())?;
                 tx.commit()?;
-                Some((user_id, token, name))
+                Some((user_id, token, name, device_id))
             }
             None => None,
         }
     };
     match claimed {
-        Some((user_id, token, name)) => Ok(Json(json!({ "userId": user_id, "token": token, "name": name }))),
+        Some((user_id, token, name, device_id)) => Ok(Json(json!({ "userId": user_id, "token": token, "name": name, "deviceId": device_id }))),
         None => {
             s.limiter.record_claim_failure(ip.bucket, now);
             Err(err(StatusCode::NOT_FOUND, "invalid_transfer_code", "code invalid or expired"))
@@ -319,7 +398,7 @@ fn validate_config(c: &Value, now: i64) -> ApiResult<calendar::CalConfig> {
     Ok(cal)
 }
 
-fn challenge_json(db: &rusqlite::Connection, id: &str) -> ApiResult<Value> {
+fn challenge_json(db: &rusqlite::Connection, id: &str, viewer_uid: &str) -> ApiResult<Value> {
     let row = db
         .query_row("SELECT config_json, seed, sim_version, invite_code, creator FROM challenges WHERE id = ?1", params![id], |r| {
             Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, i64>(2)?, r.get::<_, String>(3)?, r.get::<_, String>(4)?))
@@ -334,8 +413,12 @@ fn challenge_json(db: &rusqlite::Connection, id: &str) -> ApiResult<Value> {
             Ok(json!({ "userId": r.get::<_, String>(0)?, "name": r.get::<_, String>(1)?, "heroClass": r.get::<_, String>(2)?, "joinOrder": r.get::<_, i64>(3)? }))
         })?
         .collect::<Result<_, _>>()?;
+    let seen_day: i64 =
+        db.query_row("SELECT seen_day FROM members WHERE challenge_id = ?1 AND user_id = ?2", params![id, viewer_uid], |r| r.get(0)).optional()?.unwrap_or(0);
     let config: Value = serde_json::from_str(&row.0).unwrap_or(Value::Null);
-    Ok(json!({ "id": id, "config": config, "seed": row.1, "simVersion": row.2, "inviteCode": row.3, "creatorId": row.4, "members": members }))
+    Ok(
+        json!({ "id": id, "config": config, "seed": row.1, "simVersion": row.2, "inviteCode": row.3, "creatorId": row.4, "members": members, "seenDay": seen_day }),
+    )
 }
 
 fn is_member(db: &rusqlite::Connection, cid: &str, uid: &str) -> ApiResult<bool> {
@@ -378,7 +461,7 @@ async fn create_challenge(State(s): State<AppState>, ip: ClientIp, u: AuthUser, 
         params![id, u.id, b.hero_class, now],
     )?;
     tx.commit()?;
-    Ok(Json(challenge_json(&db, &id)?))
+    Ok(Json(challenge_json(&db, &id, &u.id)?))
 }
 
 async fn list_challenges(State(s): State<AppState>, u: AuthUser) -> ApiResult<Json<Value>> {
@@ -387,7 +470,7 @@ async fn list_challenges(State(s): State<AppState>, u: AuthUser) -> ApiResult<Js
         .prepare("SELECT c.id FROM challenges c JOIN members m ON m.challenge_id = c.id WHERE m.user_id = ?1 ORDER BY c.created_at DESC")?
         .query_map(params![u.id], |r| r.get(0))?
         .collect::<Result<_, _>>()?;
-    let list: Vec<Value> = ids.iter().map(|id| challenge_json(&db, id)).collect::<Result<_, _>>()?;
+    let list: Vec<Value> = ids.iter().map(|id| challenge_json(&db, id, &u.id)).collect::<Result<_, _>>()?;
     Ok(Json(Value::Array(list)))
 }
 
@@ -447,7 +530,7 @@ async fn join(State(s): State<AppState>, ip: ClientIp, u: AuthUser, Json(b): Jso
         return Err(err(StatusCode::NOT_FOUND, "invite_not_found", "invite code not found"));
     };
     if is_member(&tx, &cid, &u.id)? {
-        return Ok(Json(challenge_json(&tx, &cid)?));
+        return Ok(Json(challenge_json(&tx, &cid, &u.id)?));
     }
     let config: Value = serde_json::from_str(&cfg).unwrap_or(Value::Null);
     if started(&config, now) {
@@ -463,7 +546,7 @@ async fn join(State(s): State<AppState>, ip: ClientIp, u: AuthUser, Json(b): Jso
         params![cid, u.id, b.hero_class, order, now],
     )?;
     tx.commit()?;
-    Ok(Json(challenge_json(&db, &cid)?))
+    Ok(Json(challenge_json(&db, &cid, &u.id)?))
 }
 
 async fn get_challenge(State(s): State<AppState>, u: AuthUser, Path(id): Path<String>) -> ApiResult<Json<Value>> {
@@ -471,14 +554,39 @@ async fn get_challenge(State(s): State<AppState>, u: AuthUser, Path(id): Path<St
     if !is_member(&db, &id, &u.id)? {
         return Err(err(StatusCode::NOT_FOUND, "challenge_not_found", "challenge not found"));
     }
-    let mut v = challenge_json(&db, &id)?;
+    let mut v = challenge_json(&db, &id, &u.id)?;
     v["now"] = json!(now_ms());
     Ok(Json(v))
 }
 
 #[derive(Deserialize)]
+struct SeenBody {
+    day: u32,
+}
+
+async fn put_seen(State(s): State<AppState>, u: AuthUser, Path(id): Path<String>, Json(b): Json<SeenBody>) -> ApiResult<Json<Value>> {
+    let db = s.db.lock().unwrap();
+    let tx = db.unchecked_transaction()?;
+    if !is_member(&tx, &id, &u.id)? {
+        return Err(err(StatusCode::NOT_FOUND, "challenge_not_found", "challenge not found"));
+    }
+    let cfg: String = tx.query_row("SELECT config_json FROM challenges WHERE id = ?1", params![id], |r| r.get(0))?;
+    let cfg: Value = serde_json::from_str(&cfg).unwrap_or(Value::Null);
+    let cal = calendar::parse_config(&cfg).map_err(|e| err(StatusCode::INTERNAL_SERVER_ERROR, "invalid_calendar", &e))?;
+    if b.day > cal.days {
+        return Err(err(StatusCode::BAD_REQUEST, "invalid_day", "invalid day"));
+    }
+    tx.execute("UPDATE members SET seen_day = MAX(seen_day, ?1) WHERE challenge_id = ?2 AND user_id = ?3", params![b.day as i64, id, u.id])?;
+    let seen_day: i64 = tx.query_row("SELECT seen_day FROM members WHERE challenge_id = ?1 AND user_id = ?2", params![id, u.id], |r| r.get(0))?;
+    tx.commit()?;
+    Ok(Json(json!({ "seenDay": seen_day })))
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct EventBody {
     payload: Value,
+    expected_seq: Option<i64>,
 }
 
 async fn put_event(
@@ -513,6 +621,15 @@ async fn put_event(
         return Err(err(StatusCode::CONFLICT, "day_not_started", "this day has not started yet"));
     } else if now >= w.dawn {
         return Err(err(StatusCode::CONFLICT, "day_closed", "this day is closed — Dawn has passed"));
+    }
+    if let Some(expected_seq) = b.expected_seq {
+        let current_seq: i64 = tx
+            .query_row("SELECT seq FROM events WHERE challenge_id = ?1 AND day = ?2 AND user_id = ?3 AND kind = ?4", params![id, day, u.id, kind], |r| r.get(0))
+            .optional()?
+            .unwrap_or(0);
+        if current_seq != expected_seq {
+            return Err(err_params(StatusCode::CONFLICT, "event_conflict", "updated on another device", json!({ "latestSeq": current_seq })));
+        }
     }
     tx.execute("DELETE FROM events WHERE challenge_id = ?1 AND day = ?2 AND user_id = ?3 AND kind = ?4", params![id, day, u.id, kind])?;
     tx.execute(

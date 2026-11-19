@@ -756,3 +756,201 @@ fn path_sanitization_blocks_secret_leaks_and_log_injection() {
     assert_eq!(sanitize_path("/api/challenges/join"), "/api/challenges/join");
     assert_eq!(sanitize_path("/evil\r\nINFO fake\x1b[31m\u{202e}path"), "/evilINFOfake[31mpath");
 }
+
+#[tokio::test]
+async fn multi_device_play_devices_management_conflicts_and_seen() {
+    let (app, state) = test_app();
+
+    // Christian registers on Phone
+    let (st, u_phone) = req(&app, "POST", "/api/users", None, Some(json!({ "name": "Christian", "deviceLabel": "Phone Safari" }))).await;
+    assert_eq!(st, StatusCode::OK);
+    let uid = u_phone["userId"].as_str().unwrap().to_string();
+    let tok_phone = u_phone["token"].as_str().unwrap().to_string();
+    let dev_phone = u_phone["deviceId"].as_str().unwrap().to_string();
+
+    // Bruce registers and creates a challenge starting tomorrow, Christian joins, then shift to today
+    let (_, u_bruce) = req(&app, "POST", "/api/users", None, Some(json!({ "name": "Bruce" }))).await;
+    let tok_bruce = u_bruce["token"].as_str().unwrap().to_string();
+
+    let tomorrow = (chrono::Utc::now().date_naive() + chrono::Duration::days(1)).format("%Y-%m-%d").to_string();
+    let (st, ch) = req(&app, "POST", "/api/challenges", Some(&tok_bruce), Some(json!({ "config": valid_config(&tomorrow), "heroClass": "knight" }))).await;
+    assert_eq!(st, StatusCode::OK);
+    let cid = ch["id"].as_str().unwrap().to_string();
+    let invite = ch["inviteCode"].as_str().unwrap().to_string();
+
+    let (st, _) = req(&app, "POST", "/api/challenges/join", Some(&tok_phone), Some(json!({ "inviteCode": invite, "heroClass": "ranger" }))).await;
+    assert_eq!(st, StatusCode::OK);
+
+    // Shift challenge startDate to today so Day 1 is open
+    let today = calendar::local_date(crate::api::now_ms(), chrono_tz::UTC).format("%Y-%m-%d").to_string();
+    state.db.lock().unwrap().execute("UPDATE challenges SET config_json = ?1 WHERE id = ?2", params![valid_config(&today).to_string(), cid]).unwrap();
+
+    // Christian links Desktop via pairing code
+    let (st, tc) = req(&app, "POST", "/api/me/transfer-code", Some(&tok_phone), None).await;
+    assert_eq!(st, StatusCode::OK);
+    let code = tc["code"].as_str().unwrap().to_string();
+
+    let (st, claimed) = req(&app, "POST", "/api/users/claim", None, Some(json!({ "code": code, "deviceLabel": "Desktop Chrome" }))).await;
+    assert_eq!(st, StatusCode::OK);
+    assert_eq!(claimed["userId"], uid);
+    let tok_desktop = claimed["token"].as_str().unwrap().to_string();
+    let dev_desktop = claimed["deviceId"].as_str().unwrap().to_string();
+    assert_ne!(dev_phone, dev_desktop);
+
+    // /api/me reports deviceCount = 2 and challengeCount = 1 on both devices
+    let (st, me_desktop) = req(&app, "GET", "/api/me", Some(&tok_desktop), None).await;
+    assert_eq!(st, StatusCode::OK);
+    assert_eq!(me_desktop["deviceCount"], 2);
+    assert_eq!(me_desktop["challengeCount"], 1);
+    assert_eq!(me_desktop["deviceId"], dev_desktop);
+
+    // /api/me/devices lists both devices with accurate `current` flag and labels
+    let (st, devs) = req(&app, "GET", "/api/me/devices", Some(&tok_desktop), None).await;
+    assert_eq!(st, StatusCode::OK);
+    let arr = devs.as_array().unwrap();
+    assert_eq!(arr.len(), 2);
+    let d_desk = arr.iter().find(|d| d["id"] == dev_desktop).unwrap();
+    let d_ph = arr.iter().find(|d| d["id"] == dev_phone).unwrap();
+    assert_eq!(d_desk["label"], "Desktop Chrome");
+    assert_eq!(d_desk["current"], true);
+    assert_eq!(d_ph["label"], "Phone Safari");
+    assert_eq!(d_ph["current"], false);
+
+    // Phone submits Day 1 checkin; Desktop submits Day 1 orders with expectedSeq = 0
+    let (st, r_ci) =
+        req(&app, "PUT", &format!("/api/challenges/{cid}/days/1/checkin"), Some(&tok_phone), Some(json!({ "payload": { "kept": [true] }, "expectedSeq": 0 })))
+            .await;
+    assert_eq!(st, StatusCode::OK);
+    let ci_seq = r_ci["seq"].as_i64().unwrap();
+
+    let (st, r_ord1) = req(
+        &app,
+        "PUT",
+        &format!("/api/challenges/{cid}/days/1/orders"),
+        Some(&tok_desktop),
+        Some(json!({ "payload": [{ "kind": "build", "pad": "E-out-1", "type": "archer" }], "expectedSeq": 0 })),
+    )
+    .await;
+    assert_eq!(st, StatusCode::OK);
+    let ord_seq1 = r_ord1["seq"].as_i64().unwrap();
+
+    // Phone tries to write orders with stale expectedSeq = 0 -> 409 event_conflict, Desktop's orders preserved!
+    let (st, conflict) = req(
+        &app,
+        "PUT",
+        &format!("/api/challenges/{cid}/days/1/orders"),
+        Some(&tok_phone),
+        Some(json!({ "payload": [{ "kind": "build", "pad": "E-out-2", "type": "mage" }], "expectedSeq": 0 })),
+    )
+    .await;
+    assert_eq!(st, StatusCode::CONFLICT);
+    assert_eq!(conflict["code"], "event_conflict");
+    assert_eq!(conflict["params"]["latestSeq"], ord_seq1);
+
+    // Phone updates orders with fresh expectedSeq = ord_seq1 -> 200 OK
+    let (st, r_ord2) = req(
+        &app,
+        "PUT",
+        &format!("/api/challenges/{cid}/days/1/orders"),
+        Some(&tok_phone),
+        Some(json!({ "payload": [{ "kind": "build", "pad": "E-out-1", "type": "archer" }, { "kind": "build", "pad": "E-out-2", "type": "mage" }], "expectedSeq": ord_seq1 })),
+    )
+    .await;
+    assert_eq!(st, StatusCode::OK);
+    assert!(r_ord2["seq"].as_i64().unwrap() > ord_seq1);
+
+    // Bruce observes BOTH Christian's phone checkin and updated orders under the same userId
+    let (st, bruce_evs) = req(&app, "GET", &format!("/api/challenges/{cid}/events"), Some(&tok_bruce), None).await;
+    assert_eq!(st, StatusCode::OK);
+    let evs = bruce_evs["events"].as_array().unwrap();
+    assert_eq!(evs.len(), 2);
+    assert!(evs.iter().all(|e| e["userId"] == uid));
+    assert!(evs.iter().any(|e| e["kind"] == "checkin" && e["seq"] == ci_seq));
+    let ord_ev = evs.iter().find(|e| e["kind"] == "orders").unwrap();
+    assert_eq!(ord_ev["payload"].as_array().unwrap().len(), 2);
+
+    // Synced `seenDay` across devices: Phone marks Day 1 seen; Desktop reads seenDay = 1; lower day ignored
+    let (st, seen1) = req(&app, "PUT", &format!("/api/challenges/{cid}/seen"), Some(&tok_phone), Some(json!({ "day": 1 }))).await;
+    assert_eq!(st, StatusCode::OK);
+    assert_eq!(seen1["seenDay"], 1);
+    let (st, seen_lower) = req(&app, "PUT", &format!("/api/challenges/{cid}/seen"), Some(&tok_desktop), Some(json!({ "day": 0 }))).await;
+    assert_eq!(st, StatusCode::OK);
+    assert_eq!(seen_lower["seenDay"], 1);
+    let (st, ch_desk) = req(&app, "GET", &format!("/api/challenges/{cid}"), Some(&tok_desktop), None).await;
+    assert_eq!(st, StatusCode::OK);
+    assert_eq!(ch_desk["seenDay"], 1);
+    let (st, ch_bruce) = req(&app, "GET", &format!("/api/challenges/{cid}"), Some(&tok_bruce), None).await;
+    assert_eq!(st, StatusCode::OK);
+    assert_eq!(ch_bruce["seenDay"], 0);
+
+    // Bruce cannot revoke Christian's device (404)
+    let (st, _) = req(&app, "DELETE", &format!("/api/me/devices/{dev_phone}"), Some(&tok_bruce), None).await;
+    assert_eq!(st, StatusCode::NOT_FOUND);
+
+    // Desktop revokes Phone -> Phone gets 401, Desktop keeps working
+    let (st, _) = req(&app, "DELETE", &format!("/api/me/devices/{dev_phone}"), Some(&tok_desktop), None).await;
+    assert_eq!(st, StatusCode::NO_CONTENT);
+    let (st, _) = req(&app, "GET", "/api/me", Some(&tok_phone), None).await;
+    assert_eq!(st, StatusCode::UNAUTHORIZED);
+    let (st, me_after) = req(&app, "GET", "/api/me", Some(&tok_desktop), None).await;
+    assert_eq!(st, StatusCode::OK);
+    assert_eq!(me_after["deviceCount"], 1);
+}
+
+#[tokio::test]
+async fn v05_migration_adds_token_device_ids_and_member_seen_day() {
+    use sha2::Digest;
+    let tmp_db = format!("/tmp/siege_v05_mig_test_{}.db", rand::random::<u64>());
+    let now = crate::api::now_ms();
+    let raw_tok = "legacy-bearer-token-value-123456";
+    let tok_hash = hex::encode(sha2::Sha256::digest(raw_tok.as_bytes()));
+    let today = calendar::local_date(now, chrono_tz::UTC).format("%Y-%m-%d").to_string();
+
+    {
+        let conn = rusqlite::Connection::open(&tmp_db).unwrap();
+        conn.execute_batch(
+            r#"
+            PRAGMA foreign_keys = ON;
+            CREATE TABLE users (id TEXT PRIMARY KEY, name TEXT NOT NULL, created_at INTEGER NOT NULL);
+            CREATE TABLE tokens (token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, created_at INTEGER NOT NULL);
+            CREATE TABLE transfer_codes (code_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, expires_at INTEGER NOT NULL);
+            CREATE TABLE challenges (id TEXT PRIMARY KEY, creator TEXT NOT NULL REFERENCES users(id), config_json TEXT NOT NULL, invite_code TEXT NOT NULL UNIQUE, seed TEXT NOT NULL, sim_version INTEGER NOT NULL, created_at INTEGER NOT NULL);
+            CREATE TABLE members (challenge_id TEXT NOT NULL REFERENCES challenges(id), user_id TEXT NOT NULL REFERENCES users(id), hero_class TEXT NOT NULL, join_order INTEGER NOT NULL, joined_at INTEGER NOT NULL, PRIMARY KEY (challenge_id, user_id));
+            CREATE TABLE events (seq INTEGER PRIMARY KEY AUTOINCREMENT, challenge_id TEXT NOT NULL REFERENCES challenges(id), day INTEGER NOT NULL, user_id TEXT NOT NULL, kind TEXT NOT NULL, payload_json TEXT NOT NULL, updated_at INTEGER NOT NULL, UNIQUE (challenge_id, day, user_id, kind));
+            CREATE TABLE push_subs (user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, endpoint TEXT NOT NULL, p256dh TEXT NOT NULL, auth TEXT NOT NULL, created_at INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (user_id, endpoint));
+            CREATE TABLE sent_notifications (challenge_id TEXT NOT NULL, user_id TEXT NOT NULL, day INTEGER NOT NULL, kind TEXT NOT NULL, PRIMARY KEY (challenge_id, user_id, day, kind));
+            "#,
+        )
+        .unwrap();
+        conn.execute("INSERT INTO users VALUES ('u_leg', 'Legacy', ?1)", params![now]).unwrap();
+        conn.execute("INSERT INTO tokens VALUES (?1, 'u_leg', ?2)", params![tok_hash, now]).unwrap();
+        conn.execute("INSERT INTO challenges VALUES ('c_leg', 'u_leg', ?1, 'LEG123', 'seed', 1, ?2)", params![valid_config(&today).to_string(), now]).unwrap();
+        conn.execute("INSERT INTO members VALUES ('c_leg', 'u_leg', 'knight', 0, ?1)", params![now]).unwrap();
+    }
+
+    let db = db::open(&tmp_db).unwrap();
+    let limiter = Arc::new(crate::security::RateLimiter::new(false));
+    let state = AppState { db, push: None, limiter };
+    let router = app(state, None);
+
+    // Existing token authenticates, appears in /api/me/devices, and seen_day works
+    let (st, devs) = req(&router, "GET", "/api/me/devices", Some(raw_tok), None).await;
+    assert_eq!(st, StatusCode::OK);
+    let arr = devs.as_array().unwrap();
+    assert_eq!(arr.len(), 1);
+    assert_eq!(arr[0]["current"], true);
+    let dev_id = arr[0]["id"].as_str().unwrap().to_string();
+    assert!(!dev_id.is_empty());
+
+    let (st, ch) = req(&router, "GET", "/api/challenges/c_leg", Some(raw_tok), None).await;
+    assert_eq!(st, StatusCode::OK);
+    assert_eq!(ch["seenDay"], 0);
+
+    let (st, seen) = req(&router, "PUT", "/api/challenges/c_leg/seen", Some(raw_tok), Some(json!({ "day": 2 }))).await;
+    assert_eq!(st, StatusCode::OK);
+    assert_eq!(seen["seenDay"], 2);
+
+    let _ = std::fs::remove_file(&tmp_db);
+    let _ = std::fs::remove_file(format!("{tmp_db}-wal"));
+    let _ = std::fs::remove_file(format!("{tmp_db}-shm"));
+}

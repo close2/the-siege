@@ -20,7 +20,10 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS tokens (
   token_hash TEXT PRIMARY KEY,
   user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  created_at INTEGER NOT NULL
+  created_at INTEGER NOT NULL,
+  id TEXT,
+  label TEXT,
+  last_used_at INTEGER
 );
 CREATE TABLE IF NOT EXISTS transfer_codes (
   code_hash TEXT PRIMARY KEY,
@@ -42,6 +45,7 @@ CREATE TABLE IF NOT EXISTS members (
   hero_class TEXT NOT NULL,
   join_order INTEGER NOT NULL,
   joined_at INTEGER NOT NULL,
+  seen_day INTEGER NOT NULL DEFAULT 0,
   PRIMARY KEY (challenge_id, user_id)
 );
 CREATE TABLE IF NOT EXISTS events (
@@ -74,6 +78,7 @@ CREATE TABLE IF NOT EXISTS sent_notifications (
 const INDEXES: &str = r#"
 CREATE INDEX IF NOT EXISTS users_by_created_at ON users (created_at);
 CREATE INDEX IF NOT EXISTS tokens_by_user ON tokens (user_id, created_at);
+CREATE UNIQUE INDEX IF NOT EXISTS tokens_by_user_id ON tokens (user_id, id);
 CREATE INDEX IF NOT EXISTS transfer_codes_by_user ON transfer_codes (user_id);
 CREATE INDEX IF NOT EXISTS transfer_codes_by_expires ON transfer_codes (expires_at);
 CREATE INDEX IF NOT EXISTS challenges_by_creator ON challenges (creator);
@@ -177,6 +182,51 @@ fn migrate_legacy_tables(conn: &mut Connection) -> anyhow::Result<()> {
             "#,
         )?;
         tx.commit()?;
+    }
+
+    // Migrate pre-0.6 `tokens` (add `id`, `label`, `last_used_at` and backfill `id`)
+    {
+        let mut has_id = false;
+        let mut has_label = false;
+        let mut has_last_used_at = false;
+        {
+            let mut stmt = conn.prepare("PRAGMA table_info(tokens)")?;
+            let cols = stmt.query_map([], |r| r.get::<_, String>(1))?;
+            for col in cols {
+                match col?.as_str() {
+                    "id" => has_id = true,
+                    "label" => has_label = true,
+                    "last_used_at" => has_last_used_at = true,
+                    _ => {}
+                }
+            }
+        }
+        if !has_id || !has_label || !has_last_used_at {
+            let tx = conn.transaction()?;
+            if !has_id {
+                tx.execute("ALTER TABLE tokens ADD COLUMN id TEXT", [])?;
+            }
+            if !has_label {
+                tx.execute("ALTER TABLE tokens ADD COLUMN label TEXT", [])?;
+            }
+            if !has_last_used_at {
+                tx.execute("ALTER TABLE tokens ADD COLUMN last_used_at INTEGER", [])?;
+            }
+            tx.execute("UPDATE tokens SET id = substr(token_hash, 1, 16) WHERE id IS NULL", [])?;
+            tx.commit()?;
+        } else {
+            conn.execute("UPDATE tokens SET id = substr(token_hash, 1, 16) WHERE id IS NULL", [])?;
+        }
+    }
+
+    // Migrate pre-0.6 `members` (add `seen_day`)
+    let has_seen_day = {
+        let mut stmt = conn.prepare("PRAGMA table_info(members)")?;
+        let mut cols = stmt.query_map([], |r| r.get::<_, String>(1))?;
+        cols.any(|c| c.as_deref() == Ok("seen_day"))
+    };
+    if !has_seen_day {
+        conn.execute("ALTER TABLE members ADD COLUMN seen_day INTEGER NOT NULL DEFAULT 0", [])?;
     }
 
     Ok(())
