@@ -1,8 +1,16 @@
 //! HTTP API. See docs/tasks.md (M4) for the contract.
-use crate::{calendar, AppState};
+use crate::{
+    calendar,
+    security::{
+        apply_retry_after, validate_push_endpoint, ClientIp, Scope, RL_API_GLOBAL_IP, RL_CLAIM_IP, RL_CREATE_CHALLENGE_IP, RL_CREATE_CHALLENGE_TOKEN,
+        RL_CREATE_USER_IP, RL_INVITE_IP, RL_INVITE_TOKEN, RL_MINT_TRANSFER_IP, RL_MINT_TRANSFER_TOKEN, RL_PUSH_SUB_IP, RL_PUSH_SUB_TOKEN,
+    },
+    AppState,
+};
 use axum::{
-    extract::{FromRequestParts, Path, Query, State},
+    extract::{DefaultBodyLimit, FromRequestParts, Path, Query, Request, State},
     http::{request::Parts, StatusCode},
+    middleware::{self, Next},
     response::{IntoResponse, Response},
     routing::{get, post, put},
     Json, Router,
@@ -16,6 +24,11 @@ use sha2::{Digest, Sha256};
 pub const SIM_VERSION: i64 = 1;
 const MAX_MEMBERS: i64 = 8;
 const MAX_PAYLOAD: usize = 8 * 1024;
+const TRANSFER_CODE_LEN: usize = 8;
+const MAX_TOKENS_PER_USER: i64 = 20;
+const MAX_PUSH_SUBS_PER_USER: i64 = 10;
+const DEFAULT_EVENTS_LIMIT: usize = 500;
+const MAX_EVENTS_LIMIT: usize = 1000;
 /// Themes whose art is complete (mirror of `ready` in client/src/content/themes.ts).
 const THEMES: &[&str] = &["sugar"];
 const CODE_CHARS: &[u8] = b"ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -25,6 +38,7 @@ pub struct ApiError {
     pub code: &'static str,
     pub message: String,
     pub params: Option<Value>,
+    pub retry_after: Option<u64>,
 }
 
 impl IntoResponse for ApiError {
@@ -36,7 +50,8 @@ impl IntoResponse for ApiError {
         if let Some(p) = self.params {
             body["params"] = p;
         }
-        (self.status, Json(body)).into_response()
+        let res = (self.status, Json(body)).into_response();
+        apply_retry_after(res, self.retry_after)
     }
 }
 
@@ -50,11 +65,11 @@ impl From<rusqlite::Error> for ApiError {
 type ApiResult<T> = Result<T, ApiError>;
 
 fn err(status: StatusCode, code: &'static str, msg: &str) -> ApiError {
-    ApiError { status, code, message: msg.to_string(), params: None }
+    ApiError { status, code, message: msg.to_string(), params: None, retry_after: None }
 }
 
 fn err_params(status: StatusCode, code: &'static str, msg: &str, params: Value) -> ApiError {
-    ApiError { status, code, message: msg.to_string(), params: Some(params) }
+    ApiError { status, code, message: msg.to_string(), params: Some(params), retry_after: None }
 }
 
 pub fn now_ms() -> i64 {
@@ -105,7 +120,19 @@ fn issue_token(db: &rusqlite::Connection, user_id: &str) -> ApiResult<String> {
         rand::thread_rng().fill(&mut b);
         base64::Engine::encode(&base64::engine::general_purpose::URL_SAFE_NO_PAD, b)
     };
-    db.execute("INSERT INTO tokens (token_hash, user_id, created_at) VALUES (?1, ?2, ?3)", params![hash_token(&token), user_id, now_ms()])?;
+    let now = now_ms();
+    db.execute("INSERT INTO tokens (token_hash, user_id, created_at) VALUES (?1, ?2, ?3)", params![hash_token(&token), user_id, now])?;
+    db.execute(
+        "DELETE FROM tokens
+         WHERE user_id = ?1
+           AND token_hash NOT IN (
+             SELECT token_hash FROM tokens
+             WHERE user_id = ?1
+             ORDER BY created_at DESC, token_hash DESC
+             LIMIT ?2
+           )",
+        params![user_id, MAX_TOKENS_PER_USER],
+    )?;
     Ok(token)
 }
 
@@ -119,9 +146,13 @@ fn clean_name(n: &str) -> ApiResult<String> {
 
 // ---------- router ----------
 
-pub fn router() -> Router<AppState> {
-    Router::new()
-        .route("/api/health", get(health))
+async fn api_ip_guard(State(s): State<AppState>, ip: ClientIp, req: Request, next: Next) -> Result<Response, ApiError> {
+    s.limiter.check_ip(Scope::ApiGlobal, ip.bucket, RL_API_GLOBAL_IP, now_ms())?;
+    Ok(next.run(req).await)
+}
+
+pub fn router(state: AppState) -> Router<AppState> {
+    let guarded = Router::new()
         .route("/api/time", get(time))
         .route("/api/users", post(create_user))
         .route("/api/users/claim", post(claim))
@@ -135,6 +166,8 @@ pub fn router() -> Router<AppState> {
         .route("/api/challenges/{id}/events", get(events))
         .route("/api/push/key", get(push_key))
         .route("/api/push/subscribe", post(push_subscribe).delete(push_unsubscribe))
+        .route_layer(middleware::from_fn_with_state(state, api_ip_guard));
+    Router::new().route("/api/health", get(health)).merge(guarded).layer(DefaultBodyLimit::max(32 * 1024))
 }
 
 async fn health() -> Json<Value> {
@@ -150,12 +183,14 @@ struct NameBody {
     name: String,
 }
 
-async fn create_user(State(s): State<AppState>, Json(b): Json<NameBody>) -> ApiResult<Json<Value>> {
+async fn create_user(State(s): State<AppState>, ip: ClientIp, Json(b): Json<NameBody>) -> ApiResult<Json<Value>> {
+    let now = now_ms();
+    s.limiter.check_ip(Scope::CreateUser, ip.bucket, RL_CREATE_USER_IP, now)?;
     let name = clean_name(&b.name)?;
     let id = format!("u{}", random_hex(8));
     let db = s.db.lock().unwrap();
     let tx = db.unchecked_transaction()?;
-    tx.execute("INSERT INTO users (id, name, created_at) VALUES (?1, ?2, ?3)", params![id, name, now_ms()])?;
+    tx.execute("INSERT INTO users (id, name, created_at) VALUES (?1, ?2, ?3)", params![id, name, now])?;
     let token = issue_token(&tx, &id)?;
     tx.commit()?;
     Ok(Json(json!({ "userId": id, "token": token })))
@@ -171,13 +206,19 @@ async fn rename(State(s): State<AppState>, u: AuthUser, Json(b): Json<NameBody>)
     Ok(StatusCode::NO_CONTENT)
 }
 
-async fn transfer_code(State(s): State<AppState>, u: AuthUser) -> ApiResult<Json<Value>> {
+async fn transfer_code(State(s): State<AppState>, ip: ClientIp, u: AuthUser) -> ApiResult<Json<Value>> {
+    let now = now_ms();
+    s.limiter.check_ip(Scope::MintTransfer, ip.bucket, RL_MINT_TRANSFER_IP, now)?;
+    s.limiter.check_token(Scope::MintTransfer, &u.id, RL_MINT_TRANSFER_TOKEN, now)?;
     let db = s.db.lock().unwrap();
     let tx = db.unchecked_transaction()?;
-    tx.execute("DELETE FROM transfer_codes WHERE expires_at < ?1 OR user_id = ?2", params![now_ms(), u.id])?;
-    let code = random_code(6);
-    let expires = now_ms() + 10 * 60 * 1000;
-    tx.execute("INSERT INTO transfer_codes (code, user_id, expires_at) VALUES (?1, ?2, ?3)", params![code, u.id, expires])?;
+    tx.execute("DELETE FROM transfer_codes WHERE expires_at < ?1 OR user_id = ?2", params![now, u.id])?;
+    let mut code = random_code(TRANSFER_CODE_LEN);
+    while tx.query_row("SELECT 1 FROM transfer_codes WHERE code_hash = ?1", params![hash_token(&code)], |_| Ok(())).optional()?.is_some() {
+        code = random_code(TRANSFER_CODE_LEN);
+    }
+    let expires = now + 10 * 60 * 1000;
+    tx.execute("INSERT INTO transfer_codes (code_hash, user_id, expires_at) VALUES (?1, ?2, ?3)", params![hash_token(&code), u.id, expires])?;
     tx.commit()?;
     Ok(Json(json!({ "code": code, "expiresAt": expires })))
 }
@@ -187,22 +228,43 @@ struct CodeBody {
     code: String,
 }
 
-async fn claim(State(s): State<AppState>, Json(b): Json<CodeBody>) -> ApiResult<Json<Value>> {
-    let db = s.db.lock().unwrap();
-    let tx = db.unchecked_transaction()?;
-    let code = b.code.trim().to_uppercase();
-    let row: Option<(String, String)> = tx
-        .query_row(
-            "SELECT t.user_id, u.name FROM transfer_codes t JOIN users u ON u.id = t.user_id WHERE t.code = ?1 AND t.expires_at >= ?2",
-            params![code, now_ms()],
-            |r| Ok((r.get(0)?, r.get(1)?)),
-        )
-        .optional()?;
-    let (user_id, name) = row.ok_or_else(|| err(StatusCode::NOT_FOUND, "invalid_transfer_code", "code invalid or expired"))?;
-    tx.execute("DELETE FROM transfer_codes WHERE code = ?1", params![code])?;
-    let token = issue_token(&tx, &user_id)?;
-    tx.commit()?;
-    Ok(Json(json!({ "userId": user_id, "token": token, "name": name })))
+async fn claim(State(s): State<AppState>, ip: ClientIp, Json(b): Json<CodeBody>) -> ApiResult<Json<Value>> {
+    let now = now_ms();
+    s.limiter.check_claim_lockout(ip.bucket, now)?;
+    s.limiter.check_ip(Scope::ClaimTransfer, ip.bucket, RL_CLAIM_IP, now)?;
+    let trimmed = b.code.trim();
+    if trimmed.is_empty() || trimmed.len() > 32 || !trimmed.is_ascii() {
+        s.limiter.record_claim_failure(ip.bucket, now);
+        return Err(err(StatusCode::NOT_FOUND, "invalid_transfer_code", "code invalid or expired"));
+    }
+    let code_hash = hash_token(&trimmed.to_uppercase());
+    let claimed = {
+        let db = s.db.lock().unwrap();
+        let tx = db.unchecked_transaction()?;
+        let row: Option<(String, String)> = tx
+            .query_row(
+                "SELECT t.user_id, u.name FROM transfer_codes t JOIN users u ON u.id = t.user_id WHERE t.code_hash = ?1 AND t.expires_at >= ?2",
+                params![code_hash, now],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
+            .optional()?;
+        match row {
+            Some((user_id, name)) => {
+                tx.execute("DELETE FROM transfer_codes WHERE code_hash = ?1", params![code_hash])?;
+                let token = issue_token(&tx, &user_id)?;
+                tx.commit()?;
+                Some((user_id, token, name))
+            }
+            None => None,
+        }
+    };
+    match claimed {
+        Some((user_id, token, name)) => Ok(Json(json!({ "userId": user_id, "token": token, "name": name }))),
+        None => {
+            s.limiter.record_claim_failure(ip.bucket, now);
+            Err(err(StatusCode::NOT_FOUND, "invalid_transfer_code", "code invalid or expired"))
+        }
+    }
 }
 
 // ---------- challenges ----------
@@ -251,6 +313,9 @@ fn validate_config(c: &Value, now: i64) -> ApiResult<calendar::CalConfig> {
     if cal.start_date < today {
         return Err(bad("start_date_past", "start date is in the past"));
     }
+    if cal.start_date > today + chrono::Duration::days(365) {
+        return Err(bad("start_date_too_far", "start date cannot be more than 365 days in the future"));
+    }
     Ok(cal)
 }
 
@@ -291,8 +356,11 @@ struct CreateBody {
     hero_class: String,
 }
 
-async fn create_challenge(State(s): State<AppState>, u: AuthUser, Json(b): Json<CreateBody>) -> ApiResult<Json<Value>> {
-    validate_config(&b.config, now_ms())?;
+async fn create_challenge(State(s): State<AppState>, ip: ClientIp, u: AuthUser, Json(b): Json<CreateBody>) -> ApiResult<Json<Value>> {
+    let now = now_ms();
+    s.limiter.check_ip(Scope::CreateChallenge, ip.bucket, RL_CREATE_CHALLENGE_IP, now)?;
+    s.limiter.check_token(Scope::CreateChallenge, &u.id, RL_CREATE_CHALLENGE_TOKEN, now)?;
+    validate_config(&b.config, now)?;
     valid_hero(&b.hero_class)?;
     let db = s.db.lock().unwrap();
     let tx = db.unchecked_transaction()?;
@@ -303,11 +371,11 @@ async fn create_challenge(State(s): State<AppState>, u: AuthUser, Json(b): Json<
     }
     tx.execute(
         "INSERT INTO challenges (id, creator, config_json, invite_code, seed, sim_version, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
-        params![id, u.id, b.config.to_string(), code, random_hex(8), SIM_VERSION, now_ms()],
+        params![id, u.id, b.config.to_string(), code, random_hex(8), SIM_VERSION, now],
     )?;
     tx.execute(
         "INSERT INTO members (challenge_id, user_id, hero_class, join_order, joined_at) VALUES (?1, ?2, ?3, 0, ?4)",
-        params![id, u.id, b.hero_class, now_ms()],
+        params![id, u.id, b.hero_class, now],
     )?;
     tx.commit()?;
     Ok(Json(challenge_json(&db, &id)?))
@@ -327,18 +395,25 @@ fn started(config: &Value, now: i64) -> bool {
     calendar::parse_config(config).ok().and_then(|c| calendar::day_windows(&c).first().map(|w| now >= w.open)).unwrap_or(true)
 }
 
-async fn by_invite(State(s): State<AppState>, Path(code): Path<String>) -> ApiResult<Json<Value>> {
-    let db = s.db.lock().unwrap();
-    let row = db
-        .query_row(
+async fn by_invite(State(s): State<AppState>, ip: ClientIp, Path(code): Path<String>) -> ApiResult<Json<Value>> {
+    let now = now_ms();
+    s.limiter.check_invite_lockout(ip.bucket, None, now)?;
+    s.limiter.check_ip(Scope::InviteLookup, ip.bucket, RL_INVITE_IP, now)?;
+    let row = {
+        let db = s.db.lock().unwrap();
+        db.query_row(
             "SELECT c.id, c.config_json, u.name, (SELECT COUNT(*) FROM members m WHERE m.challenge_id = c.id) FROM challenges c JOIN users u ON u.id = c.creator WHERE c.invite_code = ?1",
-            params![code.to_uppercase()],
+            params![code.trim().to_uppercase()],
             |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, String>(2)?, r.get::<_, i64>(3)?)),
         )
         .optional()?
-        .ok_or_else(|| err(StatusCode::NOT_FOUND, "invite_not_found", "invite code not found"))?;
+    };
+    let Some(row) = row else {
+        s.limiter.record_invite_failure(ip.bucket, None, now);
+        return Err(err(StatusCode::NOT_FOUND, "invite_not_found", "invite code not found"));
+    };
     let config: Value = serde_json::from_str(&row.1).unwrap_or(Value::Null);
-    let joinable = !started(&config, now_ms()) && row.3 < MAX_MEMBERS;
+    let joinable = !started(&config, now) && row.3 < MAX_MEMBERS;
     Ok(Json(json!({
         "id": row.0, "title": config["title"], "startDate": config["startDate"], "days": config["days"],
         "memberCount": row.3, "creatorName": row.2, "joinable": joinable
@@ -352,19 +427,30 @@ struct JoinBody {
     hero_class: String,
 }
 
-async fn join(State(s): State<AppState>, u: AuthUser, Json(b): Json<JoinBody>) -> ApiResult<Json<Value>> {
+async fn join(State(s): State<AppState>, ip: ClientIp, u: AuthUser, Json(b): Json<JoinBody>) -> ApiResult<Json<Value>> {
+    let now = now_ms();
+    s.limiter.check_invite_lockout(ip.bucket, Some(&u.id), now)?;
+    s.limiter.check_ip(Scope::InviteLookup, ip.bucket, RL_INVITE_IP, now)?;
+    s.limiter.check_token(Scope::InviteLookup, &u.id, RL_INVITE_TOKEN, now)?;
     valid_hero(&b.hero_class)?;
     let db = s.db.lock().unwrap();
     let tx = db.unchecked_transaction()?;
-    let (cid, cfg): (String, String) = tx
-        .query_row("SELECT id, config_json FROM challenges WHERE invite_code = ?1", params![b.invite_code.to_uppercase()], |r| Ok((r.get(0)?, r.get(1)?)))
-        .optional()?
-        .ok_or_else(|| err(StatusCode::NOT_FOUND, "invite_not_found", "invite code not found"))?;
+    let found: Option<(String, String)> = tx
+        .query_row("SELECT id, config_json FROM challenges WHERE invite_code = ?1", params![b.invite_code.trim().to_uppercase()], |r| {
+            Ok((r.get(0)?, r.get(1)?))
+        })
+        .optional()?;
+    let Some((cid, cfg)) = found else {
+        drop(tx);
+        drop(db);
+        s.limiter.record_invite_failure(ip.bucket, Some(&u.id), now);
+        return Err(err(StatusCode::NOT_FOUND, "invite_not_found", "invite code not found"));
+    };
     if is_member(&tx, &cid, &u.id)? {
         return Ok(Json(challenge_json(&tx, &cid)?));
     }
     let config: Value = serde_json::from_str(&cfg).unwrap_or(Value::Null);
-    if started(&config, now_ms()) {
+    if started(&config, now) {
         return Err(err(StatusCode::CONFLICT, "season_already_started", "the season has already started"));
     }
     let count: i64 = tx.query_row("SELECT COUNT(*) FROM members WHERE challenge_id = ?1", params![cid], |r| r.get(0))?;
@@ -374,7 +460,7 @@ async fn join(State(s): State<AppState>, u: AuthUser, Json(b): Json<JoinBody>) -
     let order: i64 = tx.query_row("SELECT COALESCE(MAX(join_order), -1) + 1 FROM members WHERE challenge_id = ?1", params![cid], |r| r.get(0))?;
     tx.execute(
         "INSERT INTO members (challenge_id, user_id, hero_class, join_order, joined_at) VALUES (?1, ?2, ?3, ?4, ?5)",
-        params![cid, u.id, b.hero_class, order, now_ms()],
+        params![cid, u.id, b.hero_class, order, now],
     )?;
     tx.commit()?;
     Ok(Json(challenge_json(&db, &cid)?))
@@ -441,24 +527,42 @@ async fn put_event(
 #[derive(Deserialize)]
 struct SinceQuery {
     since: Option<i64>,
+    limit: Option<usize>,
 }
 
 async fn events(State(s): State<AppState>, u: AuthUser, Path(id): Path<String>, Query(q): Query<SinceQuery>) -> ApiResult<Json<Value>> {
-    let db = s.db.lock().unwrap();
-    if !is_member(&db, &id, &u.id)? {
-        return Err(err(StatusCode::NOT_FOUND, "challenge_not_found", "challenge not found"));
+    let since = q.since.unwrap_or(0).max(0);
+    let limit = q.limit.unwrap_or(DEFAULT_EVENTS_LIMIT).clamp(1, MAX_EVENTS_LIMIT);
+    let fetch_limit = (limit + 1) as i64;
+    let mut list: Vec<Value> = {
+        let db = s.db.lock().unwrap();
+        if !is_member(&db, &id, &u.id)? {
+            return Err(err(StatusCode::NOT_FOUND, "challenge_not_found", "challenge not found"));
+        }
+        let mut stmt = db.prepare(
+            "SELECT seq, day, user_id, kind, payload_json, updated_at
+             FROM events
+             WHERE challenge_id = ?1 AND seq > ?2
+             ORDER BY seq ASC
+             LIMIT ?3",
+        )?;
+        let rows = stmt
+            .query_map(params![id, since, fetch_limit], |r| {
+                let payload: String = r.get(4)?;
+                Ok(json!({
+                    "seq": r.get::<_, i64>(0)?, "day": r.get::<_, i64>(1)?, "userId": r.get::<_, String>(2)?, "kind": r.get::<_, String>(3)?,
+                    "payload": serde_json::from_str::<Value>(&payload).unwrap_or(Value::Null), "updatedAt": r.get::<_, i64>(5)?
+                }))
+            })?
+            .collect::<Result<_, _>>()?;
+        rows
+    };
+    let has_more = list.len() > limit;
+    if has_more {
+        list.truncate(limit);
     }
-    let mut stmt = db.prepare("SELECT seq, day, user_id, kind, payload_json, updated_at FROM events WHERE challenge_id = ?1 AND seq > ?2 ORDER BY seq")?;
-    let list: Vec<Value> = stmt
-        .query_map(params![id, q.since.unwrap_or(0)], |r| {
-            let payload: String = r.get(4)?;
-            Ok(json!({
-                "seq": r.get::<_, i64>(0)?, "day": r.get::<_, i64>(1)?, "userId": r.get::<_, String>(2)?, "kind": r.get::<_, String>(3)?,
-                "payload": serde_json::from_str::<Value>(&payload).unwrap_or(Value::Null), "updatedAt": r.get::<_, i64>(5)?
-            }))
-        })?
-        .collect::<Result<_, _>>()?;
-    Ok(Json(json!({ "events": list, "now": now_ms() })))
+    let next_since = list.last().and_then(|e| e["seq"].as_i64());
+    Ok(Json(json!({ "events": list, "now": now_ms(), "hasMore": has_more, "nextSince": next_since })))
 }
 
 // ---------- push ----------
@@ -482,14 +586,36 @@ struct SubBody {
     keys: SubKeys,
 }
 
-async fn push_subscribe(State(s): State<AppState>, u: AuthUser, Json(b): Json<SubBody>) -> ApiResult<StatusCode> {
-    if !b.endpoint.starts_with("https://") || b.endpoint.len() > 1000 {
-        return Err(err(StatusCode::BAD_REQUEST, "invalid_endpoint", "invalid endpoint"));
+async fn push_subscribe(State(s): State<AppState>, ip: ClientIp, u: AuthUser, Json(b): Json<SubBody>) -> ApiResult<StatusCode> {
+    let now = now_ms();
+    s.limiter.check_ip(Scope::PushSubscribe, ip.bucket, RL_PUSH_SUB_IP, now)?;
+    s.limiter.check_token(Scope::PushSubscribe, &u.id, RL_PUSH_SUB_TOKEN, now)?;
+    if !validate_push_endpoint(&b.endpoint, &s.limiter.extra_push_hosts) {
+        return Err(err(StatusCode::BAD_REQUEST, "invalid_endpoint", "invalid or disallowed push endpoint"));
     }
-    s.db.lock().unwrap().execute(
-        "INSERT OR REPLACE INTO push_subs (endpoint, user_id, p256dh, auth) VALUES (?1, ?2, ?3, ?4)",
-        params![b.endpoint, u.id, b.keys.p256dh, b.keys.auth],
+    let valid_key = |k: &str, max_len: usize| !k.is_empty() && k.len() <= max_len && k.bytes().all(|c| c.is_ascii_graphic());
+    if !valid_key(&b.keys.p256dh, 200) || !valid_key(&b.keys.auth, 100) {
+        return Err(err(StatusCode::BAD_REQUEST, "invalid_push_keys", "invalid push keys"));
+    }
+    let db = s.db.lock().unwrap();
+    let tx = db.unchecked_transaction()?;
+    tx.execute(
+        "INSERT INTO push_subs (user_id, endpoint, p256dh, auth, created_at) VALUES (?1, ?2, ?3, ?4, ?5)
+         ON CONFLICT(user_id, endpoint) DO UPDATE SET p256dh = excluded.p256dh, auth = excluded.auth, created_at = excluded.created_at",
+        params![u.id, b.endpoint, b.keys.p256dh, b.keys.auth, now],
     )?;
+    tx.execute(
+        "DELETE FROM push_subs
+         WHERE user_id = ?1
+           AND endpoint NOT IN (
+             SELECT endpoint FROM push_subs
+             WHERE user_id = ?1
+             ORDER BY created_at DESC, endpoint DESC
+             LIMIT ?2
+           )",
+        params![u.id, MAX_PUSH_SUBS_PER_USER],
+    )?;
+    tx.commit()?;
     Ok(StatusCode::NO_CONTENT)
 }
 

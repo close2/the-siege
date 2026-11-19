@@ -122,7 +122,7 @@ export function Settings() {
           <div style={{ fontSize: 14 }}>{t('settings.otherDeviceInstructions')}</div>
           {code && code.expiresAt > now ? (
             <div className="center">
-              <div className="title selectable" style={{ fontSize: 34, letterSpacing: '0.2em' }}>
+              <div className="title selectable" style={{ fontSize: 30, letterSpacing: '0.16em' }}>
                 {code.code}
               </div>
               <div className="muted">{t('settings.validFor', { time: fmtCountdown(code.expiresAt - now) })}</div>
@@ -134,10 +134,10 @@ export function Settings() {
           )}
           <div style={{ fontSize: 14, marginTop: 6 }}>{t('settings.useCodeFromOther')}</div>
           <div className="row">
-            <input value={claimCode} onChange={(e) => setClaimCode(e.target.value.toUpperCase())} maxLength={6} placeholder={t('onboarding.codePlaceholder')} />
+            <input value={claimCode} onChange={(e) => setClaimCode(e.target.value.toUpperCase())} maxLength={12} placeholder={t('onboarding.codePlaceholder')} />
             <button
               className="btn small"
-              disabled={claimCode.trim().length !== 6}
+              disabled={claimCode.trim().length < 6}
               onClick={() =>
                 run(async () => {
                   const u = await backend.claim(claimCode);

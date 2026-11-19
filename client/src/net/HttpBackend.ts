@@ -196,7 +196,7 @@ export class HttpBackend implements Backend {
         await this.req('PUT', `/api/challenges/${p.id}/days/${p.day}/${p.kind}`, { payload: p.payload });
         done.add(p);
       } catch (e) {
-        if (e instanceof ApiError && e.status === 0) continue;
+        if (e instanceof ApiError && (e.status === 0 || e.status === 429 || e.status >= 500)) continue;
         done.add(p);
         dropped.push(translateQueuedDrop(p.kind, p.day, (e as Error).message));
       }
@@ -213,8 +213,20 @@ export class HttpBackend implements Backend {
     if (id === DRY_RUN_ID) return this.local.events(id, since);
     // retry offline writes first so they're included (or reported as dropped) on every poll
     if (this.queue().length) await this.flushQueue();
-    const r = await this.req<{ events: GameEvent[]; now: number }>('GET', `/api/challenges/${id}/events?since=${since}`);
-    return r.events;
+    const all: GameEvent[] = [];
+    let cursor = Math.max(0, since);
+    for (let page = 0; page < 20; page++) {
+      const r = await this.req<{ events: GameEvent[]; now: number; hasMore?: boolean; nextSince?: number | null }>(
+        'GET',
+        `/api/challenges/${id}/events?since=${cursor}`,
+      );
+      if (!r.events.length) break;
+      all.push(...r.events);
+      const lastSeq = r.nextSince ?? r.events[r.events.length - 1].seq;
+      if (!r.hasMore || lastSeq <= cursor) break;
+      cursor = lastSeq;
+    }
+    return all;
   }
 
   async skipToNextDawn(id: string) {

@@ -61,9 +61,9 @@ export function Onboarding({ backend, onDone }: { backend: Backend; onDone: (u: 
             <div className="muted">{t('onboarding.otherDeviceHint')}</div>
             <label className="field">
               {t('onboarding.transferCode')}
-              <input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} maxLength={6} placeholder={t('onboarding.codePlaceholder')} autoFocus />
+              <input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} maxLength={12} placeholder={t('onboarding.codePlaceholder')} autoFocus />
             </label>
-            <button className="btn gold block" disabled={busy || code.length !== 6}>
+            <button className="btn gold block" disabled={busy || code.trim().length < 6}>
               {t('onboarding.continue')}
             </button>
             <button type="button" className="linkbtn" style={{ color: '#7a4a10' }} onClick={() => setMode('new')}>

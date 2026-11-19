@@ -1,5 +1,6 @@
-//! Every minute: evening reminders for missing check-ins and "Dawn is ready" notifications.
-use crate::{api::now_ms, calendar, push::SendResult, AppState};
+//! Every minute: prune in-memory rate limits, periodically purge 14-day challenge-less
+//! orphan users, and send evening reminders + "Dawn is ready" Web Push notifications.
+use crate::{api::now_ms, calendar, db, push::SendResult, AppState};
 use chrono::NaiveTime;
 use rusqlite::params;
 use serde_json::{json, Value};
@@ -7,6 +8,10 @@ use serde_json::{json, Value};
 const REMIND_AT: (u32, u32) = (20, 0);
 /// Dawn notifications are only sent if the scheduler notices within this window
 const DAWN_GRACE_MS: i64 = 6 * 3600 * 1000;
+const DEFAULT_PURGE_USER_DAYS: i64 = 14;
+const PURGE_INTERVAL_MS: i64 = 3600 * 1000;
+const PURGE_BATCH_SIZE: usize = 500;
+const PURGE_MAX_BATCHES_PER_PASS: usize = 5;
 
 pub(crate) struct Job {
     pub challenge_id: String,
@@ -16,14 +21,61 @@ pub(crate) struct Job {
     pub payload: Value,
 }
 
+fn configured_purge_age_ms() -> i64 {
+    let days = std::env::var("PURGE_USER_DAYS").ok().and_then(|v| v.trim().parse::<i64>().ok()).unwrap_or(DEFAULT_PURGE_USER_DAYS);
+    if days <= 0 {
+        0
+    } else {
+        days.saturating_mul(24 * 3600 * 1000)
+    }
+}
+
+pub(crate) fn run_purge_pass(state: &AppState, now: i64, max_age_ms: i64) -> usize {
+    if max_age_ms <= 0 {
+        let _ = state.db.lock().unwrap().execute("DELETE FROM transfer_codes WHERE expires_at < ?1", params![now]);
+        return 0;
+    }
+    let mut total_deleted = 0usize;
+    for _ in 0..PURGE_MAX_BATCHES_PER_PASS {
+        let batch = {
+            let mut db = state.db.lock().unwrap();
+            db::purge_orphan_users(&mut db, now, max_age_ms, PURGE_BATCH_SIZE)
+        };
+        match batch {
+            Ok(n) => {
+                total_deleted += n;
+                if n < PURGE_BATCH_SIZE {
+                    break;
+                }
+            }
+            Err(e) => {
+                tracing::error!("orphan user purge failed: {e}");
+                break;
+            }
+        }
+    }
+    if total_deleted > 0 {
+        tracing::info!(deleted = total_deleted, "purged stale challenge-less users");
+    }
+    total_deleted
+}
+
 pub async fn run(state: AppState) {
+    let purge_age_ms = configured_purge_age_ms();
+    let mut last_purge_ms: Option<i64> = None;
     let mut tick = tokio::time::interval(std::time::Duration::from_secs(60));
     loop {
         tick.tick().await;
+        let now = now_ms();
+        state.limiter.prune(now);
+        if last_purge_ms.map(|last| now.saturating_sub(last) >= PURGE_INTERVAL_MS).unwrap_or(true) {
+            run_purge_pass(&state, now, purge_age_ms);
+            last_purge_ms = Some(now);
+        }
         if state.push.is_none() {
             continue;
         }
-        let jobs = match collect_at(&state, now_ms()) {
+        let jobs = match collect_at(&state, now) {
             Ok(j) => j,
             Err(e) => {
                 tracing::error!("scheduler: {e}");
@@ -127,7 +179,7 @@ async fn send_to_user(state: &AppState, job: &Job) {
         match push.send(&endpoint, &p256dh, &auth, &job.payload).await {
             SendResult::Ok => tracing::debug!("push {} day {} → {}", job.kind, job.day, job.challenge_id),
             SendResult::Gone => {
-                let _ = state.db.lock().unwrap().execute("DELETE FROM push_subs WHERE endpoint = ?1", params![endpoint]);
+                let _ = state.db.lock().unwrap().execute("DELETE FROM push_subs WHERE user_id = ?1 AND endpoint = ?2", params![job.user_id, endpoint]);
             }
             SendResult::Failed(e) => tracing::warn!("push failed: {e}"),
         }

@@ -5,7 +5,10 @@ use openssl::{
     ec::{EcGroup, EcKey, PointConversionForm},
     nid::Nid,
 };
+use std::time::Duration;
 use web_push::{ContentEncoding, HyperWebPushClient, SubscriptionInfo, VapidSignatureBuilder, WebPushClient, WebPushError, WebPushMessageBuilder};
+
+const PUSH_SEND_TIMEOUT: Duration = Duration::from_secs(10);
 
 pub struct Push {
     pem: Vec<u8>,
@@ -21,15 +24,46 @@ pub enum SendResult {
     Failed(String),
 }
 
+fn tighten_key_permissions(path: &str) {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600));
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = path;
+    }
+}
+
+fn write_private_key(path: &str, pem: &[u8]) -> std::io::Result<()> {
+    #[cfg(unix)]
+    {
+        use std::io::Write;
+        use std::os::unix::fs::OpenOptionsExt;
+        let mut f = std::fs::OpenOptions::new().write(true).create(true).truncate(true).mode(0o600).open(path)?;
+        f.write_all(pem)?;
+        tighten_key_permissions(path);
+        Ok(())
+    }
+    #[cfg(not(unix))]
+    {
+        std::fs::write(path, pem)
+    }
+}
+
 impl Push {
     pub fn load_or_create(path: &str, subject: String) -> anyhow::Result<Push> {
         let pem = match std::fs::read(path) {
-            Ok(p) => p,
+            Ok(p) => {
+                tighten_key_permissions(path);
+                p
+            }
             Err(_) => {
                 let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1)?;
                 let key = EcKey::generate(&group)?;
                 let pem = key.private_key_to_pem()?;
-                std::fs::write(path, &pem)?;
+                write_private_key(path, &pem)?;
                 tracing::info!("generated new VAPID key at {path}");
                 pem
             }
@@ -61,10 +95,11 @@ impl Push {
             Ok(m) => m,
             Err(e) => return SendResult::Failed(e.to_string()),
         };
-        match self.client.send(msg).await {
-            Ok(()) => SendResult::Ok,
-            Err(WebPushError::EndpointNotValid) | Err(WebPushError::EndpointNotFound) => SendResult::Gone,
-            Err(e) => SendResult::Failed(e.to_string()),
+        match tokio::time::timeout(PUSH_SEND_TIMEOUT, self.client.send(msg)).await {
+            Ok(Ok(())) => SendResult::Ok,
+            Ok(Err(WebPushError::EndpointNotValid)) | Ok(Err(WebPushError::EndpointNotFound)) => SendResult::Gone,
+            Ok(Err(e)) => SendResult::Failed(e.to_string()),
+            Err(_) => SendResult::Failed("push delivery timed out".to_string()),
         }
     }
 }
