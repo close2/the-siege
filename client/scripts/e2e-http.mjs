@@ -56,22 +56,30 @@ if (!membersText.includes('Anna') || !membersText.includes('Brin')) {
 }
 console.log('User 2 joined successfully; lobby has Anna & Brin');
 
-// 3. User 1 generates a transfer code in Settings, and Device 3 claims it
+// 3. User 1 generates a pairing code in Settings, and Device 3 links via Onboarding
 await p1.goto(`${base}/settings`);
-await p1.waitForSelector('text=Show transfer code');
-await p1.click('text=Show transfer code');
+await p1.waitForSelector('text=Link another device');
+await p1.click('text=Link another device');
+await p1.waitForSelector('svg[role="img"]');
 const transferCode = (await p1.locator('.panel .center .title').textContent()).trim();
-console.log('Generated transferCode:', transferCode);
+console.log('Generated pairing code:', transferCode);
 
 const ctx3 = await browser.newContext({ viewport: { width: 400, height: 820 } });
 const p3 = await ctx3.newPage();
 track(p3, 'p3');
 await p3.goto(base);
-await p3.click('text=I already play on another device');
-await p3.fill('input[placeholder="ABC123"]', transferCode);
-await p3.click('text=Continue');
+await p3.click('text=Already playing');
+await p3.fill('input[placeholder="ABCD1234"]', transferCode);
+await p3.click('text=Link this device');
 await p3.waitForSelector('text=No sugar');
-console.log('Device 3 claimed Anna account and sees challenge on Home screen');
+console.log('Device 3 linked to Anna account and sees challenge on Home screen');
+
+// 4. Verify both devices stay signed in and Settings shows 2 linked devices
+await p3.goto(`${base}/settings`);
+await p3.waitForSelector('text=Linked devices (2)');
+await p1.goto(base);
+await p1.waitForSelector('text=No sugar');
+console.log('Both Device 1 and Device 3 stay active simultaneously!');
 
 if (errors.length) {
   console.error('Errors:', errors);
