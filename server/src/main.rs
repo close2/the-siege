@@ -7,9 +7,57 @@ mod push;
 mod scheduler;
 mod security;
 
-use axum::Router;
+use axum::{
+    extract::Request,
+    http::{header, HeaderValue, StatusCode},
+    middleware::{self, Next},
+    response::Response,
+    Router,
+};
 use std::{net::SocketAddr, sync::Arc};
 use tower_http::services::{ServeDir, ServeFile};
+
+const CACHE_NO_CACHE: &str = "no-cache, must-revalidate";
+const CACHE_IMMUTABLE: &str = "public, max-age=31536000, immutable";
+const CACHE_SHORT: &str = "public, max-age=86400";
+
+fn has_version_query(query: Option<&str>) -> bool {
+    query.is_some_and(|q| q.split('&').any(|pair| pair.strip_prefix("v=").is_some_and(|v| !v.is_empty())))
+}
+
+pub(crate) fn static_cache_control(path: &str, query: Option<&str>, content_type: Option<&str>) -> &'static str {
+    if matches!(
+        path,
+        "/" | "/index.html" | "/sw.js" | "/registerSW.js" | "/push-sw.js" | "/manifest.webmanifest" | "/assets/assets.gen.json"
+    ) || content_type.is_some_and(|ct| ct.starts_with("text/html"))
+    {
+        return CACHE_NO_CACHE;
+    }
+    let is_hashed_workbox = path.starts_with("/workbox-") && path.ends_with(".js");
+    let is_hashed_asset = path.starts_with("/assets/")
+        && (path.ends_with(".js")
+            || path.ends_with(".css")
+            || path.ends_with(".woff")
+            || path.ends_with(".woff2")
+            || (path.ends_with(".webp") && has_version_query(query)));
+    if is_hashed_workbox || is_hashed_asset {
+        CACHE_IMMUTABLE
+    } else {
+        CACHE_SHORT
+    }
+}
+
+async fn static_cache_headers(req: Request, next: Next) -> Response {
+    let path = req.uri().path().to_owned();
+    let query = req.uri().query().map(str::to_owned);
+    let mut res = next.run(req).await;
+    if matches!(res.status(), StatusCode::OK | StatusCode::NOT_MODIFIED) && !res.headers().contains_key(header::CACHE_CONTROL) {
+        let ct = res.headers().get(header::CONTENT_TYPE).and_then(|v| v.to_str().ok()).map(str::to_owned);
+        let value = static_cache_control(&path, query.as_deref(), ct.as_deref());
+        res.headers_mut().insert(header::CACHE_CONTROL, HeaderValue::from_static(value));
+    }
+    res
+}
 
 #[derive(Clone)]
 pub struct AppState {
@@ -23,7 +71,10 @@ pub fn app(state: AppState, static_dir: Option<&str>) -> Router {
     let mut r = api::router(state.clone()).with_state(state);
     if let Some(dir) = static_dir {
         let index = format!("{dir}/index.html");
-        r = r.fallback_service(ServeDir::new(dir).fallback(ServeFile::new(index)));
+        let static_router = Router::new()
+            .fallback_service(ServeDir::new(dir).fallback(ServeFile::new(index)))
+            .layer(middleware::from_fn(static_cache_headers));
+        r = r.fallback_service(static_router);
     }
     r.layer(security::http_trace_layer(trust_private_proxy))
 }

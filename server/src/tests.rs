@@ -954,3 +954,63 @@ async fn v05_migration_adds_token_device_ids_and_member_seen_day() {
     let _ = std::fs::remove_file(format!("{tmp_db}-wal"));
     let _ = std::fs::remove_file(format!("{tmp_db}-shm"));
 }
+
+#[tokio::test]
+async fn static_cache_control_headers_match_pwa_best_practices() {
+    let dir = std::env::temp_dir().join(format!("siege-static-test-{}", std::process::id()));
+    let assets_dir = dir.join("assets");
+    std::fs::create_dir_all(&assets_dir).unwrap();
+    std::fs::write(dir.join("index.html"), "<!doctype html><title>Siege</title>").unwrap();
+    std::fs::write(dir.join("sw.js"), "// sw").unwrap();
+    std::fs::write(dir.join("registerSW.js"), "// reg").unwrap();
+    std::fs::write(dir.join("push-sw.js"), "// push").unwrap();
+    std::fs::write(dir.join("manifest.webmanifest"), "{}").unwrap();
+    std::fs::write(dir.join("workbox-dcde9eb3.js"), "// wb").unwrap();
+    std::fs::write(dir.join("icon-192.png"), [0u8; 4]).unwrap();
+    std::fs::write(assets_dir.join("index-G-Ul54dN.js"), "// bundle").unwrap();
+    std::fs::write(assets_dir.join("assets.gen.json"), "{}").unwrap();
+    std::fs::write(assets_dir.join("map_valley.webp"), [0u8; 4]).unwrap();
+
+    let db = db::open(":memory:").unwrap();
+    let limiter = Arc::new(crate::security::RateLimiter::new(false));
+    let router = app(AppState { db, push: None, limiter }, Some(dir.to_str().unwrap()));
+
+    let fetch_cc = |uri: &str| {
+        let router = router.clone();
+        let uri = uri.to_string();
+        async move {
+            let res = router.oneshot(Request::builder().uri(&uri).body(Body::empty()).unwrap()).await.unwrap();
+            let status = res.status();
+            let cc = res.headers().get(axum::http::header::CACHE_CONTROL).and_then(|v| v.to_str().ok()).map(str::to_owned);
+            (status, cc)
+        }
+    };
+
+    // Unversioned PWA entrypoints and SPA routes must revalidate (never trapped in CDN/browser cache)
+    for uri in ["/", "/index.html", "/sw.js", "/registerSW.js", "/push-sw.js", "/manifest.webmanifest", "/assets/assets.gen.json", "/c/some-challenge"] {
+        let (st, cc) = fetch_cc(uri).await;
+        assert_eq!(st, StatusCode::OK, "uri={uri}");
+        assert_eq!(cc.as_deref(), Some("no-cache, must-revalidate"), "uri={uri}");
+    }
+
+    // Content-hashed assets are cached immutably
+    for uri in ["/workbox-dcde9eb3.js", "/assets/index-G-Ul54dN.js", "/assets/map_valley.webp?v=deadbeef"] {
+        let (st, cc) = fetch_cc(uri).await;
+        assert_eq!(st, StatusCode::OK, "uri={uri}");
+        assert_eq!(cc.as_deref(), Some("public, max-age=31536000, immutable"), "uri={uri}");
+    }
+
+    // Unversioned images get short cache (not immutable)
+    for uri in ["/icon-192.png", "/assets/map_valley.webp"] {
+        let (st, cc) = fetch_cc(uri).await;
+        assert_eq!(st, StatusCode::OK, "uri={uri}");
+        assert_eq!(cc.as_deref(), Some("public, max-age=86400"), "uri={uri}");
+    }
+
+    // API responses are unaffected by static cache middleware
+    let (st, cc) = fetch_cc("/api/time").await;
+    assert_eq!(st, StatusCode::OK);
+    assert_eq!(cc, None);
+
+    let _ = std::fs::remove_dir_all(&dir);
+}
