@@ -136,4 +136,40 @@ describe('HttpBackend multi-device & sync reliability', () => {
     expect(lost).toBe(2);
     expect(localStorage.getItem('siege.token')).toBeNull();
   });
+
+  it('caches challenges for offline startup and clears cache on account switch or 401', async () => {
+    const fetchMock = vi.fn<typeof fetch>();
+    globalThis.fetch = fetchMock;
+
+    fetchMock.mockResolvedValueOnce(jsonRes(200, { userId: 'u1', token: 'tok1', deviceId: 'd1' }));
+    const b = new HttpBackend();
+    await b.register('Christian');
+
+    const sample = {
+      id: 'c1',
+      creatorId: 'u1',
+      inviteCode: 'ABC123',
+      seed: 'deadbeef',
+      simVersion: 1,
+      config: { title: 'Test', type: 'binary', rules: ['No sugar'], days: 30, startDate: '2026-11-17', dawnTime: '11:00', timeZone: 'Europe/Vienna', difficulty: 'normal', theme: 'sugar', inactiveDates: [] },
+      members: [],
+    };
+    fetchMock.mockResolvedValueOnce(jsonRes(200, [sample]));
+    const onlineList = await b.listChallenges();
+    expect(onlineList).toHaveLength(1);
+
+    // Offline listChallenges & getChallenge fall back to cache
+    fetchMock.mockRejectedValueOnce(new TypeError('offline'));
+    const offlineList = await b.listChallenges();
+    expect(offlineList.map((c) => c.id)).toEqual(['c1']);
+
+    fetchMock.mockRejectedValueOnce(new TypeError('offline'));
+    const offlineOne = await b.getChallenge('c1');
+    expect(offlineOne.id).toBe('c1');
+
+    // 401 clears cached challenges
+    fetchMock.mockResolvedValueOnce(jsonRes(401, { code: 'invalid_token', error: 'invalid token' }));
+    await expect(b.listChallenges()).rejects.toBeInstanceOf(ApiError);
+    expect(localStorage.getItem('siege.challenges.v1')).toBeNull();
+  });
 });

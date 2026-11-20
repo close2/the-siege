@@ -47,7 +47,26 @@ export function Home() {
           ⚙ {user.name}
         </button>
       </div>
-      {backend.mode === 'local' && <div className="chip" style={{ alignSelf: 'flex-start' }}>{t('home.offlineChip')}</div>}
+      {backend.mode === 'local' && (
+        <div className="row" style={{ alignSelf: 'flex-start', flexWrap: 'wrap' }}>
+          <div className="chip">{t('home.offlineChip')}</div>
+          {new URLSearchParams(location.search).get('backend') !== 'local' && (
+            <button
+              className="btn small"
+              onClick={() => {
+                try {
+                  localStorage.removeItem('siege.backend');
+                } catch {
+                  /* ignore */
+                }
+                location.reload();
+              }}
+            >
+              {t('home.reconnect')}
+            </button>
+          )}
+        </div>
+      )}
       {error && <div className="error">{error}</div>}
 
       {list && list.length === 0 && (

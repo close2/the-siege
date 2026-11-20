@@ -8,7 +8,7 @@ import { seasonClock, type SeasonClock } from '../sim/calendar';
 import { stateHash } from '../sim/hash';
 import { createInitialState, previewDay, resolveDay } from '../sim/season';
 import type { BattleSetup, Checkin, DayInputs, DayReport, MapDef, Order, PlayerDayReport, PlayerId, SeasonSetup, SeasonState } from '../sim/types';
-import { disambiguateMemberNames, ekey, mergeEventLayers } from './seasonHelpers';
+import { disambiguateMemberNames, ekey, findDesyncDay, formatStateHash, mergeEventLayers } from './seasonHelpers';
 
 export const BOT_HIT_RATE = 0.8;
 
@@ -210,15 +210,12 @@ export function useSeason(backend: Backend, id: string, me: PlayerId) {
     const planDay = clock.next !== null && clock.started ? clock.next : null;
     const planInputs = planDay ? inputsFor(setup, events, bots, planDay, state) : null;
     const preview = planDay ? previewDay(setup, state, planInputs!) : null;
-    let desyncDay: number | null = null;
-    for (let d = 1; d <= clock.resolved && desyncDay === null; d++) {
-      const mine = serverEvents.get(ekey(d, me, 'hash'))?.payload as string | undefined;
-      if (!mine) continue;
-      for (const p of setup.players) {
-        const theirs = serverEvents.get(ekey(d, p.id, 'hash'))?.payload as string | undefined;
-        if (theirs && theirs !== mine) desyncDay = d;
-      }
-    }
+    const desyncDay = findDesyncDay(
+      clock.resolved,
+      me,
+      setup.players.map((p) => p.id),
+      serverEvents,
+    );
     return {
       challenge,
       setup,
@@ -249,7 +246,7 @@ export function useSeason(backend: Backend, id: string, me: PlayerId) {
     for (let d = 1; d <= view.clock.resolved; d++) {
       const w = view.clock.windows[d - 1];
       if (!w || lastPullNow < w.dawn) continue;
-      const h = stateHash(view.states[d]);
+      const h = formatStateHash(stateHash(view.states[d]));
       const serverHash = serverEvents.get(ekey(d, me, 'hash'))?.payload as string | undefined;
       if (serverHash === h || sentHashesRef.current.get(d) === h) continue;
       sentHashesRef.current.set(d, h);

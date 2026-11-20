@@ -64,3 +64,38 @@ export function shortAccountTag(userId: string): string {
   const clean = userId.replace(/^u/, '');
   return `#${clean.slice(-6)}`;
 }
+
+/**
+ * Version prefix for post-v0.6.0 state hash events. Pre-v0.6.0 clients could upload unversioned
+ * hashes computed before the initial events pull completed; ignoring unversioned hashes prevents
+ * stale v0.5.0 rows from falsely flagging up-to-date clients as out of sync.
+ */
+export const HASH_PREFIX = 'v2:';
+
+export function formatStateHash(hash: string): string {
+  return `${HASH_PREFIX}${hash}`;
+}
+
+export function parseStateHash(payload: unknown): string | null {
+  if (typeof payload !== 'string' || !payload.startsWith(HASH_PREFIX)) return null;
+  const h = payload.slice(HASH_PREFIX.length);
+  return h.length > 0 ? h : null;
+}
+
+export function findDesyncDay(
+  resolvedDays: number,
+  me: string,
+  playerIds: readonly string[],
+  serverEvents: ReadonlyMap<string, GameEvent>,
+): number | null {
+  for (let d = 1; d <= resolvedDays; d++) {
+    const mine = parseStateHash(serverEvents.get(ekey(d, me, 'hash'))?.payload);
+    if (!mine) continue;
+    for (const pid of playerIds) {
+      if (pid === me) continue;
+      const theirs = parseStateHash(serverEvents.get(ekey(d, pid, 'hash'))?.payload);
+      if (theirs && theirs !== mine) return d;
+    }
+  }
+  return null;
+}

@@ -49,6 +49,7 @@
   "home": {
     "help": "📖 Hilfe",
     "offlineChip": "Offline-Demo · Mitspieler sind Bots",
+    "reconnect": "Neu verbinden",
     "emptyTitle": "Noch keine Belagerungen",
     "emptyText": "Starte eine Herausforderung mit Freunden — oder lerne die Grundlagen in einem geführten Probelauf.",
     "howToPlay": "📖 Spielanleitung",

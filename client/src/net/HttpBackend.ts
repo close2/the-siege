@@ -20,6 +20,12 @@ import {
 const TOKEN = 'siege.token';
 const QUEUE = 'siege.queue';
 const PUSH_SYNCED = 'siege.pushSynced';
+const CHALLENGES_CACHE = 'siege.challenges.v1';
+
+interface CachedChallenges {
+  userId?: string;
+  challenges: Challenge[];
+}
 
 interface QueuedPut {
   userId?: string;
@@ -123,6 +129,7 @@ export class HttpBackend implements Backend {
     this.token = null;
     this.user = null;
     localStorage.removeItem(TOKEN);
+    localStorage.removeItem(CHALLENGES_CACHE);
     this.saveQueue([]);
     try {
       if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(PUSH_SYNCED);
@@ -195,10 +202,11 @@ export class HttpBackend implements Backend {
     localStorage.setItem(TOKEN, r.token);
     this.user = { id: r.userId, name, deviceId: r.deviceId };
     this.local.ensureUser(this.user);
-    // Drop queued writes belonging to any other (or untagged legacy) account so they never leak across accounts.
+    // Drop queued writes and cached challenges belonging to any other account so they never leak across accounts.
     if (prevId !== r.userId) {
       const filtered = this.queue().filter((x) => x.userId === r.userId);
       if (filtered.length !== this.queue().length) this.saveQueue(filtered);
+      localStorage.removeItem(CHALLENGES_CACHE);
     }
     try {
       if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(PUSH_SYNCED);
@@ -301,10 +309,41 @@ export class HttpBackend implements Backend {
     }
   }
 
+  private readCachedChallenges(): Challenge[] | null {
+    try {
+      const raw = localStorage.getItem(CHALLENGES_CACHE);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as CachedChallenges;
+      if (!Array.isArray(parsed.challenges)) return null;
+      if (this.user?.id && parsed.userId && parsed.userId !== this.user.id) return null;
+      return parsed.challenges;
+    } catch {
+      return null;
+    }
+  }
+
+  private writeCachedChallenges(challenges: Challenge[]) {
+    try {
+      const payload: CachedChallenges = { userId: this.user?.id, challenges };
+      localStorage.setItem(CHALLENGES_CACHE, JSON.stringify(payload));
+    } catch {
+      /* ignore quota / restricted storage */
+    }
+  }
+
   async listChallenges() {
-    const remote = await this.req<Challenge[]>('GET', '/api/challenges');
     const dry = this.local.getDryRun();
-    return dry ? [dry, ...remote] : remote;
+    try {
+      const remote = await this.req<Challenge[]>('GET', '/api/challenges');
+      this.writeCachedChallenges(remote);
+      return dry ? [dry, ...remote] : remote;
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 0) {
+        const cached = this.readCachedChallenges();
+        if (cached) return dry ? [dry, ...cached] : cached;
+      }
+      throw e;
+    }
   }
 
   createChallenge(config: ChallengeConfig, heroClass: HeroClass) {
@@ -324,9 +363,24 @@ export class HttpBackend implements Backend {
     return this.req<Challenge>('POST', '/api/challenges/join', { inviteCode: code.toUpperCase(), heroClass });
   }
 
-  getChallenge(id: string) {
+  async getChallenge(id: string) {
     if (id === DRY_RUN_ID) return this.local.getChallenge(id);
-    return this.req<Challenge>('GET', `/api/challenges/${id}`);
+    try {
+      const c = await this.req<Challenge>('GET', `/api/challenges/${id}`);
+      const cached = this.readCachedChallenges();
+      if (cached) {
+        const idx = cached.findIndex((x) => x.id === c.id);
+        const next = idx >= 0 ? cached.map((x, i) => (i === idx ? c : x)) : [c, ...cached];
+        this.writeCachedChallenges(next);
+      }
+      return c;
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 0) {
+        const hit = this.readCachedChallenges()?.find((x) => x.id === id);
+        if (hit) return hit;
+      }
+      throw e;
+    }
   }
 
   async putEvent(id: string, day: number, kind: EventKind, payload: unknown, opts?: { expectedSeq?: number }): Promise<PutEventResult> {

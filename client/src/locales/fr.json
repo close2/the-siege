@@ -49,6 +49,7 @@
   "home": {
     "help": "📖 Aide",
     "offlineChip": "Démo hors ligne · coéquipiers bots",
+    "reconnect": "Reconnecter",
     "emptyTitle": "Aucun siège en cours",
     "emptyText": "Lancez un défi avec des amis — ou découvrez les bases avec un galop d'essai guidé.",
     "howToPlay": "📖 Comment jouer",

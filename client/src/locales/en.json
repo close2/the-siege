@@ -49,6 +49,7 @@
   "home": {
     "help": "📖 Help",
     "offlineChip": "Offline demo · teammates are bots",
+    "reconnect": "Reconnect",
     "emptyTitle": "No sieges yet",
     "emptyText": "Start a challenge with friends — or learn the ropes with a guided dry run.",
     "howToPlay": "📖 How to play",
